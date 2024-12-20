@@ -1,3 +1,5 @@
+import datetime
+
 from sklearn.tree import DecisionTreeClassifier
 import random
 import time
@@ -9,6 +11,19 @@ from sklearn.feature_selection import mutual_info_classif
 from sklearn.neighbors import KNeighborsClassifier
 import utils
 from priority_queue import MaxPriorityQueue
+import csv
+import logging
+timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+log_filename = f"log_{timestamp}.txt"
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)  # Nível de log (INFO, DEBUG, ERROR, etc.)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler = logging.FileHandler(log_filename, mode='w', encoding='utf-8')
+file_handler.setFormatter(formatter)
+console_handler = logging.StreamHandler()  # Exibe no terminal
+console_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 def evaluate_algorithm(features_idx, algorithm):
     features = [feature_names[i] for i in features_idx]
@@ -25,44 +40,47 @@ def evaluate_algorithm(features_idx, algorithm):
     elif algorithm == 'xgboost':
         model = xgb.XGBClassifier(eval_metric='mlogloss')
     else:
-        raise ValueError("Algoritmo não suportado")
+        raise ValueError("Unsupported algorithm")
 
     return utils.evaluate_model(model, X_train[features], y_train, X_test[features], y_test)
 
 def evaluate_baseline(feature_names, X_train, y_train, X_test, y_test):
-    print("\nAvaliação Baseline com todos os algoritmos usando todas as features:")
+    logging.info("\nBaseline Evaluation with all algorithms using all features:")
     algorithms = ['knn', 'dt', 'nb', 'svm', 'rf', 'xgboost']
     baseline_results = {}
     for algo in algorithms:
         f1 = evaluate_algorithm(list(range(len(feature_names))), algo)
         baseline_results[algo] = f1
-        print(f"F1-Score {algo.upper()} usando todas as características: {f1:.4f}")
-    print("-" * 50)
+        logging.info(f"F1-Score {algo.upper()} using all features: {f1:.4f}")
+    logging.info("-" * 50)
     return baseline_results
+
+def log_to_csv(phase, initial_solution, initial_f1, improved_solution, improved_f1, best_f1, phase_time):
+    with open(log_file, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([phase, initial_solution, initial_f1, improved_solution, improved_f1, best_f1, phase_time])
 
 def load_and_preprocess():
     X_train, y_train, X_test, y_test = utils.load_data()
     y_train, y_test, X_train, X_test, le = utils.preprocess_data(X_train, y_train, X_test, y_test)
+    logging.info("Preprocessing completed successfully.")
     feature_names = X_train.columns.tolist()
-    ig_scores = mutual_info_classif(X_train, y_train)
-    sorted_features = sorted(zip(feature_names, ig_scores), key=lambda x: x[1], reverse=True)
 
-    # Criar DataFrames combinados e salvar
-    y_train_original = le.inverse_transform(y_train)
-    y_test_original = le.inverse_transform(y_test)
-    train_df_combined = X_train.copy()
-    train_df_combined['class'] = y_train_original
-    test_df_combined = X_test.copy()
-    test_df_combined['class'] = y_test_original
-    train_df_combined.to_csv('train_dataset.csv', index=False, encoding='utf-8')
-    test_df_combined.to_csv('test_dataset.csv', index=False, encoding='utf-8')
+    logging.info("Ranking Features using Mutual Information for composing RCL.")
+    # Mutual Information (MI) measures the mutual dependence between two random variables.
+    # In the context of feature selection, it evaluates how much information about the label
+    # is provided by a particular feature.
+    ig_scores = mutual_info_classif(X_train, y_train)
+    logging.info("Feature ranking completed.")
+
+    sorted_features = sorted(zip(feature_names, ig_scores), key=lambda x: x[1], reverse=True)
 
     return X_train, y_train, X_test, y_test, feature_names, sorted_features, le
 
 def print_feature_scores(sorted_features):
-    print("\nScores de Information Gain para as features:")
+    logging.info("\nMutua Information for Features:")
     for feature, score in sorted_features:
-        print(f"Feature {feature}: IG = {score:.4f}")
+        logging.info(f"Feature {feature}: MI = {score:.4f}")
 
 def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size):
     max_f1_score = evaluate_algorithm(initial_solution, algorithm)
@@ -84,7 +102,7 @@ def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size
         new_solution_set = frozenset(new_solution)
         if new_solution_set in seen_solutions:
             repeated_solutions_count += 1  # Incrementa o contador
-            print(f"Mesma combinação de características encontrada: {new_solution_set}, gerando nova solução...")
+            logging.info(f"Duplicate feature combination found: {new_solution_set}, generating a new solution...")
             continue  # Ignora esta solução e continua a busca
 
         f1_score = evaluate_algorithm(new_solution, algorithm)
@@ -94,43 +112,43 @@ def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size
             best_solution = new_solution
             seen_solutions.add(new_solution_set)
         elif new_solution_set == frozenset(best_solution):
-            print(f"Nenhuma melhoria real na solução: {new_solution}")
+            logging.info(f"No real improvement in the solution: {new_solution}")
 
     return max_f1_score, best_solution, repeated_solutions_count
 
 def construction(args):
-    # 'sorted_features' é uma lista de tuplas (feature, IG) ordenada pelo IG. estou pegando as top X para compor a RCL.
+    # 'sorted_features' is a list of tuples (feature, IG) sorted by IG. Picking the top X to compose the RCL.
     RCL = [feature for feature, _ in sorted_features[:args.rcl_size]]
 
     RCL_indices = [feature_names.index(feature) for feature in RCL]
 
-    print(f"RCL Features: {RCL}")
-    print(f"RCL Features Índices: {RCL_indices}")
+    logging.info(f"RCL Features: {RCL}")
+    logging.info(f"RCL Feature Indices: {RCL_indices}")
 
     all_solutions = []
-    local_search_improvements = {}  # Dicionário para armazenar os resultados da busca local
+    local_search_improvements = {}  # Dictionary to store results of local search
 
     priority_queue = MaxPriorityQueue()
     max_f1_score = -1
     best_solution = []
 
     seen_initial_solutions = set()
-    repeated_solutions_count = 0  # Inicializa o contador de soluções repetidas
-    repeated_solutions_count_local_search = 0  # Inicializa o contador de soluções repetidas da busca_local
+    repeated_solutions_count = 0  # Initialize the counter for repeated solutions
+    repeated_solutions_count_local_search = 0  # Initialize the counter for repeated solutions during local search
 
     start_time = time.perf_counter()
 
     if args.rcl_size > len(feature_names):
-        raise ValueError("O tamanho da RCL não pode ser maior que o número de features disponíveis.")
+        raise ValueError("The RCL size cannot exceed the number of available features.")
     if args.initial_solution > args.rcl_size:
-        raise ValueError("O tamanho da solução inicial não pode ser maior que o tamanho da RCL.")
+        raise ValueError("The initial solution size cannot exceed the RCL size.")
 
     for iteration in range(args.constructive_iterations):
-        # Garantir que a solução inicial seja única
+        # Ensure the initial solution is unique
         while True:
-            # Selecionar aleatoriamente k features da RCL para gerar soluções iniciais
+            # Randomly select k features from RCL to generate initial solutions
             selected_features = random.sample(RCL, k=args.initial_solution)
-            # Converter os nomes das características em índices
+            # Convert feature names into indices
             solution = [feature_names.index(feature_name) for feature_name in selected_features]
             solution_set = frozenset(selected_features)
 
@@ -139,94 +157,117 @@ def construction(args):
                 break
             else:
                 repeated_solutions_count += 1  # Incrementa o contador
-                print(f"Solução inicial repetida encontrada: {solution}, gerando nova solução...")
+                logging.info(f"Repeated initial solution found: {solution}, generating a new solution...")
 
         f1_score = evaluate_algorithm(solution, args.algorithm)
-        print(f"F1-Score: {f1_score} for solution: {solution}")
+        logging.info(f"F1-Score: {f1_score} for solution: {solution}")
         all_solutions.append((iteration, f1_score, solution))
 
         if f1_score > 0.0:
-            # Se a fila de prioridade não estiver cheia, simplesmente insere o novo F1-Score.
+            # If the priority queue is not full, simply insert the new F1-Score.
             if len(priority_queue.heap) < args.priority_queue:
                 priority_queue.insert((f1_score, solution))
             else:
-                # Se a fila de prioridade estiver cheia, encontre o menor F1-Score na fila.
+                # If the priority queue is full, find the lowest F1-Score in the queue.
                 lowest_f1 = min(priority_queue.heap, key=lambda x: x[0])[0]
                 if f1_score > lowest_f1:
-                    # Remove o item com o menor F1-Score antes de inserir o novo item.
+                    # Remove the item with the lowest F1-Score before inserting the new item.
                     priority_queue.heap.remove((lowest_f1, [item[1] for item in priority_queue.heap if item[0] == lowest_f1][0]))
                     priority_queue.insert((f1_score, solution))
         local_search_improvements[tuple(solution)] = 0
+
+        log_to_csv("Constructive Phase", solution, f1_score, None, None, max_f1_score, time.perf_counter() - start_time)
         # visualize_heap(priority_queue.heap)
     total_elapsed_time = time.perf_counter() - start_time
-    print(f"Total de soluções iniciais repetidas: {repeated_solutions_count}")
-    print(f"Tempo total de execução da Fase Construtiva: {total_elapsed_time} segundos")
+    logging.info(f"Total repeated initial solutions: {repeated_solutions_count}")
+    logging.info(f"Total execution time for Constructive Phase: {total_elapsed_time} seconds")
     print_priority_queue(priority_queue)
     utils.plot_solutions_with_priority(all_solutions, priority_queue)
 
-    start_time = time.perf_counter()  # Busca Local
+    start_time = time.perf_counter()  # Local Search Phase
+    total_iterations = len(priority_queue.heap) * args.local_iterations  # Total predicted iterations
+    current_iteration = 0
 
     while not priority_queue.is_empty():
         _, current_solution = priority_queue.extract_max()
 
-        original_f1_score = evaluate_algorithm(current_solution, args.algorithm)  # Avaliar a solução atual uma única vez
+        original_f1_score = evaluate_algorithm(current_solution, args.algorithm)  # Evaluate the current solution once
         improved_f1_score, improved_solution, repeated_solutions_count_local_search = local_search(
         current_solution, repeated_solutions_count_local_search, args.algorithm, args.rcl_size)
 
-        # Verifica se houve melhoria em relação ao F1-Score original da solução específica
+        log_to_csv("Local Search", current_solution, original_f1_score, improved_solution, improved_f1_score,
+                   max_f1_score, time.perf_counter() - start_time)
+
+        # Increment iteration count
+        current_iteration += args.local_iterations
+
+        # Progress log every 50 iterations
+        elapsed_time = time.perf_counter() - start_time
+        estimated_total_time = (elapsed_time / current_iteration) * total_iterations
+        logging.info(
+            f"[{current_iteration}/{total_iterations}] Best solution: F1-Score {improved_f1_score:.4f} |"
+            f" Estimated remaining time: {estimated_total_time - elapsed_time:.2f}s")
+
+        # Check if there was an improvement compared to the original F1-Score of the specific solution
         if improved_f1_score > original_f1_score:
             local_search_improvements[tuple(current_solution)] = improved_f1_score - original_f1_score
-            print(f"Melhoria na Solução Local! F1-Score: {improved_f1_score} para solução: {current_solution}. Nova solução: {improved_solution}")
+            logging.info(f"Improvement in Local Search! F1-Score: {improved_f1_score} for solution: {current_solution}. New solution: {improved_solution}")
 
-        # Verifica se a solução melhorada é a melhor solução global
+        # Check if the improved solution is the global best solution
         if improved_f1_score > max_f1_score:
             max_f1_score = improved_f1_score
             best_solution = improved_solution
-            print(f"Nova Melhor Solução Global! F1-Score: {max_f1_score} para solução: {best_solution}")
+            logging.info(f"New Global Best Solution! F1-Score: {max_f1_score} for solution: {best_solution}")
 
     total_local_search_time = time.perf_counter() - start_time  # Busca Local
 
     utils.plot_solutions(all_solutions, priority_queue, local_search_improvements)
 
-    print(f"Total de soluções repetidas na busca local: {repeated_solutions_count_local_search}")
-    print("Tamanho Solução Inicial: ", selected_features)
-    print("Tamanho RCL: ", len(RCL))
-
-
-    print("Melhor F1-Score:", max_f1_score)
-    print("Melhor conjunto de features:", best_solution)
-    print(f"Tempo total de execução da Fase Construtiva: {total_elapsed_time} segundos")
-    print(f"Tempo total de execução da Fase de Busca Local: {total_local_search_time} segundos")
+    logging.info(f"Total repeated solutions in local search: {repeated_solutions_count_local_search}")
+    logging.info("Initial Solution Size: ", selected_features)
+    logging.info("RCL Size: ", len(RCL))
+    logging.info("Best F1-Score:", max_f1_score)
+    logging.info("Best Feature Set:", best_solution)
+    logging.info(f"Total execution time for Constructive Phase: {total_elapsed_time} seconds")
+    logging.info(f"Total execution time for Local Search Phase: {total_local_search_time} seconds")
+    log_to_csv("Summary Constructive Phase", None, None, None, None, max_f1_score, total_elapsed_time)
+    log_to_csv("Summary Local Search", None, None, None, None, max_f1_score, total_local_search_time)
 
 def print_priority_queue(priority_queue):
-    print("Fila de prioridade:")
+    logging.info("Priority Queue:")
     for score, solution in priority_queue.heap:
-        print(f"F1-Score: {-score}, Solution: {solution}")
+        logging.info(f"F1-Score: {-score}, Solution: {solution}")
 
 if __name__ == '__main__':
     args = utils.parse_args()
 
-    print("Parâmetros utilizados na execução:")
-    print(f"  Algoritmo: {args.algorithm}")
-    print(f"  Tamanho da RCL: {args.rcl_size}")
-    print(f"  Tamanho da solução inicial: {args.initial_solution}")
-    print(f"  Tamanho da fila de prioridade: {args.priority_queue}")
-    print(f"  Iterações na fase de busca local: {args.local_iterations}")
-    print(f"  Iterações na fase construtiva: {args.constructive_iterations}")
-    print("-" * 50)
+    logging.info("Execution parameters:")
+    logging.info(f"  Algorithm: {args.algorithm}")
+    logging.info(f"  RCL Size: {args.rcl_size}")
+    logging.info(f"  Initial Solution Size: {args.initial_solution}")
+    logging.info(f"  Priority Queue Size: {args.priority_queue}")
+    logging.info(f"  Local Search Iterations: {args.local_iterations}")
+    logging.info(f"  Constructive Iterations: {args.constructive_iterations}")
+    logging.info("-" * 50)
 
-    # Carregar e preprocessar os dados
+    log_file = f"graspq_results_rcl{args.rcl_size}_cc{args.constructive_iterations}_bs{args.priority_queue}_is{args.initial_solution}.csv"
+
+    with open(log_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["phase", "initial_solution", "initial_f1_score", "improved_f1_score", "phase_time"])
+
+    # Load and preprocess the data
     X_train, y_train, X_test, y_test, feature_names, sorted_features, le = load_and_preprocess()
 
-    # Imprimir os scores de IG
+    # Print IG scores
     print_feature_scores(sorted_features)
 
-    # Avaliação inicial (baseline)
-    baseline_results = evaluate_baseline(feature_names, X_train, y_train, X_test, y_test)
+    # Initial evaluation (baseline)
+    # baseline_results = evaluate_baseline(feature_names, X_train, y_train, X_test, y_test)
 
-    # Continuar com o algoritmo selecionado para as próximas etapas
-    print(f"Algoritmo selecionado para fases construtivas e busca local: {args.algorithm.upper()}")
+    # Continue with the selected algorithm for the next steps
+    logging.info(f"Selected algorithm for constructive and local search phases: {args.algorithm.upper()}")
 
-    # Executar a construção e busca local
+    # Execute construction and local search
     construction(args)
 
