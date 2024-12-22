@@ -1,10 +1,13 @@
 import argparse
+import datetime
+
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder, OrdinalEncoder
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, roc_auc_score)
 import logging
+timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
 def load_data():
     # Data loading
@@ -145,7 +148,7 @@ def plot_solutions_with_priority(all_solutions, priority_queue):
     plt.legend(handles=[plt.Line2D([0], [0], marker='o', color='w', label='Top 10', markersize=10, markerfacecolor='red'),
                        plt.Line2D([0], [0], marker='o', color='w', label='Outras Soluções', markersize=10, markerfacecolor='blue')],
                loc='lower right')
-    plt.savefig("priority_plot.png")
+    plt.savefig(f"priority_plot_{timestamp}.png")
 
 
 def plot_solutions(all_solutions, priority_queue, local_search_improvements):
@@ -191,9 +194,8 @@ def plot_solutions(all_solutions, priority_queue, local_search_improvements):
     plt.tick_params(axis='y', labelsize=12)  # Aumenta o tamanho da fonte das marcações do eixo y
     plt.tight_layout()
 
-    plt.savefig("all_bestsolution_.png")
-    plt.savefig("all_bestsolution_.pdf")
-
+    plt.savefig(f"all_bestsolution_{timestamp}.png")
+    plt.savefig(f"all_bestsolution_{timestamp}.pdf")
 
 # Função para parsear argumentos da linha de comando
 def parse_args():
