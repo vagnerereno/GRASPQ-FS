@@ -56,6 +56,11 @@ def load_data():
                          'vsbBTrapAreaSum', 'vsbCTrapAreaSum', 'vsmATrapAreaSum', 'vsmBTrapAreaSum',
                          'vsmCTrapAreaSum', 'gooseLengthDiff']
 
+    initial_features_train = train_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
+    initial_features_test = test_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
+
+    logging.info(f"Initial number of features in the training dataset: {initial_features_train}")
+    logging.info(f"Initial number of features in the test dataset: {initial_features_test}")
     # Removing enriched and NaN columns
     # train_df = train_df.dropna(axis=1)  # .drop(columns=columns_to_remove, errors='ignore')
     # test_df = test_df.dropna(axis=1)  # .drop(columns=columns_to_remove, errors='ignore')
