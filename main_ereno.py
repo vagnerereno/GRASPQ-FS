@@ -227,7 +227,14 @@ def construction(args):
     logging.info(f"Initial Solution Size: {selected_features}")
     logging.info(f"RCL Size: {len(RCL)}")
     logging.info(f"Best F1-Score: {max_f1_score}")
-    logging.info(f"Best Feature Set: {best_solution}")
+    logging.info(f"Best Feature Set (indices): {best_solution}")
+
+    # Map indices to feature names
+    best_feature_names = [(feature_names[i], i) for i in best_solution]
+    formatted_best_features = ", ".join([f"'{name}' ({index})" for name, index in best_feature_names])
+
+    logging.info(f"Best Feature Set (names): {formatted_best_features}")
+
     logging.info(f"Total execution time for Constructive Phase: {total_elapsed_time} seconds")
     logging.info(f"Total execution time for Local Search Phase: {total_local_search_time} seconds")
     log_to_csv("Summary Constructive Phase", None, None, None, None, max_f1_score, total_elapsed_time)
