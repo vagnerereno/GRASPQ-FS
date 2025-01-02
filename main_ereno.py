@@ -90,7 +90,7 @@ def print_feature_scores(sorted_features):
     for feature, score in sorted_features:
         logging.info(f"Feature {feature}: MI = {score:.4f}")
 
-def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size):
+def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size, RCL_INDICES):
     max_f1_score = evaluate_algorithm(initial_solution, algorithm)
     best_solution = initial_solution.copy()
     seen_solutions = {frozenset(initial_solution)}
@@ -99,12 +99,15 @@ def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size
         new_solution = best_solution.copy()
 
         for replace_index in range(len(new_solution)):
-            RCL = [feature_names.index(feature) for feature, score in sorted_features[:rcl_size]
-                   if feature_names.index(feature) not in new_solution]
-            if not RCL:
+            # RCL = [feature_names.index(feature) for feature, score in sorted_features[:rcl_size]
+            #        if feature_names.index(feature) not in new_solution]
+            # if not RCL:
+            #     break
+            RCL_candidates = [idx for idx in RCL_INDICES if idx not in new_solution]
+            if not RCL_candidates:
                 break
 
-            new_feature = random.choice(RCL)
+            new_feature = random.choice(RCL_candidates)
             new_solution[replace_index] = new_feature
 
         new_solution_set = frozenset(new_solution)
@@ -129,10 +132,10 @@ def construction(args):
     # RCL = [feature for feature, _ in sorted_features[:args.rcl_size]]
     # RCL_indices = [feature_names.index(feature) for feature in RCL]
     RCL = RCL_25_FEATURES
-    RCL_indices = RCL_25_INDICES
+    RCL_INDICES = RCL_25_INDICES
 
     logging.info(f"RCL Features: {RCL}")
-    logging.info(f"RCL Feature Indices: {RCL_indices}")
+    logging.info(f"RCL Feature Indices: {RCL_INDICES}")
 
     all_solutions = []
     local_search_improvements = {}  # Dictionary to store results of local search
@@ -202,7 +205,7 @@ def construction(args):
 
         original_f1_score = evaluate_algorithm(current_solution, args.algorithm)  # Evaluate the current solution once
         improved_f1_score, improved_solution, repeated_solutions_count_local_search = local_search(
-        current_solution, repeated_solutions_count_local_search, args.algorithm, args.rcl_size)
+        current_solution, repeated_solutions_count_local_search, args.algorithm, args.rcl_size, RCL_INDICES)
 
         log_to_csv("Local Search", current_solution, original_f1_score, improved_solution, improved_f1_score,
                    max_f1_score, time.perf_counter() - start_time)
