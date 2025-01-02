@@ -25,6 +25,12 @@ console_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
+RCL_25_FEATURES = ['t', 'StNum', 'stDiff', 'timestampDiff', 'timeFromLastChange', 'sqDiff', 'SqNum', 'tDiff', 'delay',
+                   'Time', 'GooseTimestamp', 'isbCRmsValue', 'vsbB', 'isbARmsValue', 'isbA', 'isbC', 'isbATrapAreaSum',
+                   'isbCTrapAreaSum', 'vsbC', 'vsbARmsValue', 'vsbBRmsValue', 'isbBRmsValue', 'vsbA', 'isbBTrapAreaSum',
+                   'vsbCRmsValue']
+RCL_25_INDICES = [19, 22, 30, 36, 38, 31, 21, 37, 39, 0, 20, 9, 5, 7, 1, 3, 13, 15, 6, 10, 11, 8, 4, 14, 12]
+
 def evaluate_algorithm(features_idx, algorithm):
     features = [feature_names[i] for i in features_idx]
     if algorithm == 'knn':
@@ -70,10 +76,12 @@ def load_and_preprocess():
     # Mutual Information (MI) measures the mutual dependence between two random variables.
     # In the context of feature selection, it evaluates how much information about the label
     # is provided by a particular feature.
-    ig_scores = mutual_info_classif(X_train, y_train, random_state=42)
-    logging.info("Feature ranking completed.")
-
-    sorted_features = sorted(zip(feature_names, ig_scores), key=lambda x: x[1], reverse=True)
+    # ig_scores = mutual_info_classif(X_train, y_train, random_state=42)
+    # logging.info("Feature ranking completed.")
+    #
+    # sorted_features = sorted(zip(feature_names, ig_scores), key=lambda x: x[1], reverse=True)
+    logging.info("Using precomputed RCL features and indices.")
+    sorted_features = [(feature, feature_names.index(feature)) for feature in RCL_25_FEATURES]
 
     return X_train, y_train, X_test, y_test, feature_names, sorted_features, le
 
@@ -118,9 +126,10 @@ def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size
 
 def construction(args):
     # 'sorted_features' is a list of tuples (feature, IG) sorted by IG. Picking the top X to compose the RCL.
-    RCL = [feature for feature, _ in sorted_features[:args.rcl_size]]
-
-    RCL_indices = [feature_names.index(feature) for feature in RCL]
+    # RCL = [feature for feature, _ in sorted_features[:args.rcl_size]]
+    # RCL_indices = [feature_names.index(feature) for feature in RCL]
+    RCL = RCL_25_FEATURES
+    RCL_indices = RCL_25_INDICES
 
     logging.info(f"RCL Features: {RCL}")
     logging.info(f"RCL Feature Indices: {RCL_indices}")
