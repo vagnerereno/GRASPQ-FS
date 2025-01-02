@@ -70,7 +70,7 @@ def load_and_preprocess():
     # Mutual Information (MI) measures the mutual dependence between two random variables.
     # In the context of feature selection, it evaluates how much information about the label
     # is provided by a particular feature.
-    ig_scores = mutual_info_classif(X_train, y_train)
+    ig_scores = mutual_info_classif(X_train, y_train, random_state=42)
     logging.info("Feature ranking completed.")
 
     sorted_features = sorted(zip(feature_names, ig_scores), key=lambda x: x[1], reverse=True)
