@@ -11,8 +11,8 @@ timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
 def load_data():
     # Data loading
-    train_df = pd.read_csv('data/hibrid_dataset_GOOSE_train.csv', sep=',')
-    test_df = pd.read_csv('data/hibrid_dataset_GOOSE_test.csv', sep=',')
+    train_df = pd.read_csv('data/train.csv', sep=',')
+    test_df = pd.read_csv('data/test.csv', sep=',')
     logging.info(f"Original dataset (Train): \n{train_df.head().to_string()}")
     logging.info(f"Original dataset (Test): \n{test_df.head().to_string()}")
     logging.info(f"Unique classes in the test dataset: {test_df['class'].unique()}")
@@ -20,23 +20,23 @@ def load_data():
 
     # Remove specific attacks from the training set
     # train_df = train_df[train_df['class'] != 'random_replay']
-    # train_df = train_df[train_df['class'] != 'inverse_replay']
-    # train_df = train_df[train_df['class'] != 'masquerade_fake_fault']
-    # train_df = train_df[train_df['class'] != 'masquerade_fake_normal']
-    # train_df = train_df[train_df['class'] != 'injection']
-    # train_df = train_df[train_df['class'] != 'high_StNum']
-    # train_df = train_df[train_df['class'] != 'poisoned_high_rate']
+    train_df = train_df[train_df['class'] != 'inverse_replay']
+    train_df = train_df[train_df['class'] != 'masquerade_fake_fault']
+    train_df = train_df[train_df['class'] != 'masquerade_fake_normal']
+    train_df = train_df[train_df['class'] != 'injection']
+    train_df = train_df[train_df['class'] != 'high_StNum']
+    train_df = train_df[train_df['class'] != 'poisoned_high_rate']
     logging.info(f"Remaining unique classes in the training dataset: {train_df['class'].unique()}")
     logging.info(f"Size of the training dataset after filtering: {len(train_df)}")
 
     # Remove specific attacks from the test set
     # test_df = test_df[test_df['class'] != 'random_replay']
-    # test_df = test_df[test_df['class'] != 'inverse_replay']
-    # test_df = test_df[test_df['class'] != 'masquerade_fake_fault']
-    # test_df = test_df[test_df['class'] != 'masquerade_fake_normal']
-    # test_df = test_df[test_df['class'] != 'injection']
-    # test_df = test_df[test_df['class'] != 'high_StNum']
-    # test_df = test_df[test_df['class'] != 'poisoned_high_rate']
+    test_df = test_df[test_df['class'] != 'inverse_replay']
+    test_df = test_df[test_df['class'] != 'masquerade_fake_fault']
+    test_df = test_df[test_df['class'] != 'masquerade_fake_normal']
+    test_df = test_df[test_df['class'] != 'injection']
+    test_df = test_df[test_df['class'] != 'high_StNum']
+    test_df = test_df[test_df['class'] != 'poisoned_high_rate']
     logging.info(f"Remaining unique classes in the test dataset: {test_df['class'].unique()}")
     logging.info(f"Size of the test dataset after filtering: {len(test_df)}")
 
@@ -58,14 +58,14 @@ def load_data():
 
     logging.info(f"Initial number of features in the training dataset: {initial_features_train}")
     logging.info(f"Initial number of features in the test dataset: {initial_features_test}")
-    # Removing enriched and NaN columns
-    train_df = train_df.drop(columns=columns_to_remove, errors='ignore')
-    test_df = test_df.drop(columns=columns_to_remove, errors='ignore')
-
-    remove_features_train = train_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
-    remove_features_test = test_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
-    logging.info(f"Number of features in the training dataset after removing enriched ones: {remove_features_train}")
-    logging.info(f"Number of features in the test dataset after removing enriched ones:: {remove_features_test}")
+    # Removing enriched and NaN columns (Uncomment the next 6 lines)
+    # train_df = train_df.drop(columns=columns_to_remove, errors='ignore')
+    # test_df = test_df.drop(columns=columns_to_remove, errors='ignore')
+    #
+    # remove_features_train = train_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
+    # remove_features_test = test_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
+    # logging.info(f"Number of features in the training dataset after removing enriched ones: {remove_features_train}")
+    # logging.info(f"Number of features in the test dataset after removing enriched ones:: {remove_features_test}")
 
     # Splitting features and labels
     X_train = train_df.drop(columns=['class'])
