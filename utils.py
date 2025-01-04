@@ -44,17 +44,14 @@ def load_data():
     test_df = test_df.reset_index(drop=True)
 
     # Enriched columns from the ERENO dataset to be removed, if necessary
-    columns_to_remove = ['stDiff', 'sqDiff', 'gooseLenghtDiff', 'cbStatusDiff', 'apduSizeDiff',
-                         'frameLengthDiff', 'timestampDiff', 'tDiff', 'timeFromLastChange',
-                         'delay', 'isbARms', 'isbBRms', 'isbCRms', 'ismARms', 'ismBRms', 'ismCRms',
-                         'ismARmsValue', 'ismBRmsValue', 'ismCRmsValue', 'csbArms', 'csvBRms',
-                         'csbCRms', 'vsmARms', 'vsmBRms', 'vsmCRms', 'isbARmsValue', 'isbBRmsValue',
-                         'isbCRmsValue', 'vsbARmsValue', 'vsbBRmsValue', 'vsbCRmsValue',
-                         'vsmARmsValue', 'vsmBRmsValue', 'vsmCRmsValue', 'isbATrapAreaSum',
-                         'isbBTrapAreaSum', 'isbCTrapAreaSum', 'ismATrapAreaSum', 'ismBTrapAreaSum',
-                         'ismCTrapAreaSum', 'csvATrapAreaSum', 'csvBTrapAreaSum', 'vsbATrapAreaSum',
-                         'vsbBTrapAreaSum', 'vsbCTrapAreaSum', 'vsmATrapAreaSum', 'vsmBTrapAreaSum',
-                         'vsmCTrapAreaSum', 'gooseLengthDiff']
+    columns_to_remove = [
+        "isbARmsValue", "isbBRmsValue", "iisbCRmsValue", "ismARmsValue", "ismBRmsValue", "ismCRmsValue",
+        "vsbARmsue", "vsbBRmsValue", "vsbCRmsValue", "vsmARmsValue", "vsmBRmsValue", "vsmCRmsValue",
+        "isbATrapAreaSum", "isbBTrapAreaSum", "isbCTrapAreaSum", "ismATrapAreaSuValm", "ismBTrapAreaSum",
+        "ismCTrapAreaSum", "vsbATrapAreaSum", "vsbBTrapAreaSum", "vsbCTrapAreaSum", "vsmATrapAreaSum",
+        "vsmBTrapAreaSum", "vsmCTrapAreaSum", "stDiff", "sqDiff", "gooseLengthDiff", "cbStatusDiff",
+        "apduSizeDiff", "frameLengthDiff", "timestampDiff", "tDiff", "timeFromLastChange", "delay"
+    ]
 
     initial_features_train = train_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
     initial_features_test = test_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
@@ -62,14 +59,20 @@ def load_data():
     logging.info(f"Initial number of features in the training dataset: {initial_features_train}")
     logging.info(f"Initial number of features in the test dataset: {initial_features_test}")
     # Removing enriched and NaN columns
-    # train_df = train_df.dropna(axis=1)  # .drop(columns=columns_to_remove, errors='ignore')
-    # test_df = test_df.dropna(axis=1)  # .drop(columns=columns_to_remove, errors='ignore')
+    train_df = train_df.drop(columns=columns_to_remove, errors='ignore')
+    test_df = test_df.drop(columns=columns_to_remove, errors='ignore')
+
+    remove_features_train = train_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
+    remove_features_test = test_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
+    logging.info(f"Number of features in the training dataset after removing enriched ones: {remove_features_train}")
+    logging.info(f"Number of features in the test dataset after removing enriched ones:: {remove_features_test}")
 
     # Splitting features and labels
     X_train = train_df.drop(columns=['class'])
     y_train = train_df['class']
     X_test = test_df.drop(columns=['class'])
     y_test = test_df['class']
+
     return X_train, y_train, X_test, y_test
 
 def preprocess_data(X_train, y_train, X_test, y_test):
