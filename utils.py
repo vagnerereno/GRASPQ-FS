@@ -131,11 +131,8 @@ def calculate_metrics(y_true, y_pred):
     #
     # f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
     f1 = f1_score(y_true, y_pred, average='binary')
-    accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, average='binary')
-    recall = recall_score(y_true, y_pred, average='binary')
 
-    return accuracy, precision, recall, f1#, conf_matrix
+    return f1#, conf_matrix
 
 def evaluate_model(classifier, X_train, y_train, X_test, y_test):
     # Train the classifier
@@ -146,7 +143,7 @@ def evaluate_model(classifier, X_train, y_train, X_test, y_test):
 
     # Calculate metrics
     # accuracy, precision, recall, f1, conf_matrix = calculate_metrics(y_test, y_pred)
-    accuracy, precision, recall, f1 = calculate_metrics(y_test, y_pred)
+    f1 = calculate_metrics(y_test, y_pred)
 
     # Print the confusion matrix and metrics
     # logging.info(conf_matrix)
