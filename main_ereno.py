@@ -270,7 +270,7 @@ if __name__ == '__main__':
     print_feature_scores(sorted_features)
 
     # Initial evaluation (baseline)
-    baseline_results = evaluate_baseline(feature_names, X_train, y_train, X_test, y_test)
+    # baseline_results = evaluate_baseline(feature_names, X_train, y_train, X_test, y_test)
 
     # Continue with the selected algorithm for the next steps
     logging.info(f"Selected algorithm for constructive and local search phases: {args.algorithm.upper()}")
