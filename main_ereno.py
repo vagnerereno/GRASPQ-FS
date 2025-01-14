@@ -1,11 +1,12 @@
 import datetime
 
+from sklearn.linear_model import SGDClassifier
 from sklearn.tree import DecisionTreeClassifier
 import random
 import time
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
+from sklearn.svm import SVC, LinearSVC
 import xgboost as xgb
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.neighbors import KNeighborsClassifier
@@ -39,6 +40,10 @@ def evaluate_algorithm(features_idx, algorithm):
         model = RandomForestClassifier()
     elif algorithm == 'xgboost':
         model = xgb.XGBClassifier(eval_metric='mlogloss')
+    elif algorithm == 'linear_svc':
+        model = LinearSVC(max_iter=1000)
+    elif algorithm == 'sgd':
+        model = SGDClassifier(max_iter=1000, tol=1e-3)
     else:
         raise ValueError("Unsupported algorithm")
 

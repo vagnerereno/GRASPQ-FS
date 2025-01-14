@@ -226,9 +226,9 @@ def parse_args():
 
     parser.add_argument(
         "-a", "--algorithm", "--alg",
-        type=str, choices=['knn', 'dt', 'nb', 'svm', 'rf', 'xgboost'],
-        default='knn',
-        help="Algorithm to be used for evaluation (knn, dt, nb, rf, svm, xgboost)."
+        type=str, choices=['knn', 'dt', 'nb', 'svm', 'rf', 'xgboost', 'linear_svc', 'sgd'],
+        default='nb',
+        help="Algorithm to be used for evaluation (knn, dt, nb, rf, svm, xgboost, linear_svc, sgd)."
     )
     parser.add_argument(
         "-rcl", "--rcl_size", "--rcl",
