@@ -32,7 +32,7 @@ def evaluate_algorithm(features_idx, algorithm):
     elif algorithm == 'dt':
         model = DecisionTreeClassifier()
     elif algorithm == 'nb':
-        model = GaussianNB()
+        model = GaussianNB(var_smoothing=1e-9)
     elif algorithm == 'svm':
         model = SVC()
     elif algorithm == 'rf':
@@ -87,33 +87,42 @@ def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size
     best_solution = initial_solution.copy()
     seen_solutions = {frozenset(initial_solution)}
 
-    for _ in range(args.local_iterations):
+    logging.info(f"Starting Local Search with initial solution: {initial_solution}, F1-Score: {max_f1_score}")
+
+    for iteration in range(args.local_iterations):
         new_solution = best_solution.copy()
 
         for replace_index in range(len(new_solution)):
             RCL = [feature_names.index(feature) for feature, score in sorted_features[:rcl_size]
                    if feature_names.index(feature) not in new_solution]
             if not RCL:
+                logging.info("RCL is empty. No replacement possible.")
                 break
 
             new_feature = random.choice(RCL)
             new_solution[replace_index] = new_feature
 
+        # Generated Neighbor Solution Log
+        # logging.info(f"Generated neighbor solution (Iteration {iteration + 1}): {new_solution}")
+
         new_solution_set = frozenset(new_solution)
         if new_solution_set in seen_solutions:
-            repeated_solutions_count += 1  # Incrementa o contador
+            repeated_solutions_count += 1
             logging.info(f"Duplicate feature combination found: {new_solution_set}, generating a new solution...")
             continue  # Ignora esta solução e continua a busca
 
         f1_score = evaluate_algorithm(new_solution, algorithm)
+        # logging.info(f"F1-Score for neighbor solution: {f1_score}")
 
         if f1_score > max_f1_score and new_solution_set != frozenset(best_solution):
             max_f1_score = f1_score
             best_solution = new_solution
             seen_solutions.add(new_solution_set)
+            logging.info(f"Improvement found! New best solution: {best_solution} with F1-Score: {max_f1_score}")
         elif new_solution_set == frozenset(best_solution):
             logging.info(f"No real improvement in the solution: {new_solution}")
 
+    logging.info(f"Local Search completed. Best F1-Score: {max_f1_score}, Best Solution: {best_solution}")
     return max_f1_score, best_solution, repeated_solutions_count
 
 def construction(args):
