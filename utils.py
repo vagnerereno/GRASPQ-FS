@@ -143,11 +143,11 @@ def plot_solutions_with_priority(all_solutions, priority_queue):
     plt.savefig(f"priority_plot.png")
 
 
-def plot_solutions(all_solutions, priority_queue, local_search_improvements):
+def plot_solutions(all_solutions, priority_queue_snapshot, local_search_improvements):
     plt.figure(figsize=(9, 4))
 
     # Convert the priority queue into a set for fast lookup
-    priority_set = set([tuple(sol) for _, sol in priority_queue.heap])
+    priority_set = set([tuple(sol) for _, sol in priority_queue_snapshot])
 
     # Extracting iteration indices and F1-Scores
     iterations = [iteration for iteration, _, _ in all_solutions]
@@ -160,14 +160,7 @@ def plot_solutions(all_solutions, priority_queue, local_search_improvements):
     # Draw bars for priority queue solutions in red
     for i, sol in enumerate(solutions):
         if tuple(sol) in priority_set:
-            plt.bar(iterations[i], f1_scores[i], color='red', label='Top 10')
-
-    # Check for improvements and paint the bar red
-    for i, sol in enumerate(solutions):
-        improvement = local_search_improvements.get(tuple(sol), 0)
-        if improvement > 0:
-            # Se houve melhoria, pinta a barra inteira de vermelho
-            plt.bar(iterations[i], f1_scores[i] + improvement, color='red', label='SI Incluídas na Fila de Prioridades')
+            plt.bar(iterations[i], f1_scores[i], color='red', label='SI Incluídas na Fila de Prioridades')
 
     # Overpaint improvements in green where applicable
     for i, sol in enumerate(solutions):

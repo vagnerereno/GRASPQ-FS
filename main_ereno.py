@@ -193,6 +193,8 @@ def construction(args):
     total_iterations = len(priority_queue.heap) * args.local_iterations  # Total predicted iterations
     queue_progress = 0
 
+    priority_queue_snapshot = list(priority_queue.heap) # saves priority solutions
+
     while not priority_queue.is_empty():
         _, current_solution = priority_queue.extract_max()
 
@@ -223,7 +225,7 @@ def construction(args):
 
     total_local_search_time = time.perf_counter() - start_time  # Busca Local
 
-    utils.plot_solutions(all_solutions, priority_queue, local_search_improvements)
+    utils.plot_solutions(all_solutions, priority_queue_snapshot, local_search_improvements)
 
     logging.info(f"Total repeated solutions in local search: {repeated_solutions_count_local_search}")
     logging.info(f"Initial Solution Size: {selected_features}")
