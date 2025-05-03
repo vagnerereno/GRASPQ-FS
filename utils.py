@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder, OrdinalEncoder
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, roc_auc_score)
 import logging
-timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
 def load_data():
     # Data loading
@@ -20,25 +19,25 @@ def load_data():
 
     # Remove specific attacks from the training set
     # train_df = train_df[train_df['class'] != 'random_replay']
-    train_df = train_df[train_df['class'] != 'inverse_replay']
-    train_df = train_df[train_df['class'] != 'masquerade_fake_fault']
-    train_df = train_df[train_df['class'] != 'masquerade_fake_normal']
-    train_df = train_df[train_df['class'] != 'injection']
-    train_df = train_df[train_df['class'] != 'high_StNum']
-    train_df = train_df[train_df['class'] != 'poisoned_high_rate']
-    logging.info(f"Remaining unique classes in the training dataset: {train_df['class'].unique()}")
-    logging.info(f"Size of the training dataset after filtering: {len(train_df)}")
+    # train_df = train_df[train_df['class'] != 'inverse_replay']
+    # train_df = train_df[train_df['class'] != 'masquerade_fake_fault']
+    # train_df = train_df[train_df['class'] != 'masquerade_fake_normal']
+    # train_df = train_df[train_df['class'] != 'injection']
+    # train_df = train_df[train_df['class'] != 'high_StNum']
+    # train_df = train_df[train_df['class'] != 'poisoned_high_rate']
+    # logging.info(f"Remaining unique classes in the training dataset: {train_df['class'].unique()}")
+    # logging.info(f"Size of the training dataset after filtering: {len(train_df)}")
 
     # Remove specific attacks from the test set
     # test_df = test_df[test_df['class'] != 'random_replay']
-    test_df = test_df[test_df['class'] != 'inverse_replay']
-    test_df = test_df[test_df['class'] != 'masquerade_fake_fault']
-    test_df = test_df[test_df['class'] != 'masquerade_fake_normal']
-    test_df = test_df[test_df['class'] != 'injection']
-    test_df = test_df[test_df['class'] != 'high_StNum']
-    test_df = test_df[test_df['class'] != 'poisoned_high_rate']
-    logging.info(f"Remaining unique classes in the test dataset: {test_df['class'].unique()}")
-    logging.info(f"Size of the test dataset after filtering: {len(test_df)}")
+    # test_df = test_df[test_df['class'] != 'inverse_replay']
+    # test_df = test_df[test_df['class'] != 'masquerade_fake_fault']
+    # test_df = test_df[test_df['class'] != 'masquerade_fake_normal']
+    # test_df = test_df[test_df['class'] != 'injection']
+    # test_df = test_df[test_df['class'] != 'high_StNum']
+    # test_df = test_df[test_df['class'] != 'poisoned_high_rate']
+    # logging.info(f"Remaining unique classes in the test dataset: {test_df['class'].unique()}")
+    # logging.info(f"Size of the test dataset after filtering: {len(test_df)}")
 
     train_df = train_df.reset_index(drop=True)
     test_df = test_df.reset_index(drop=True)
@@ -52,16 +51,6 @@ def load_data():
         "vsmBTrapAreaSum", "vsmCTrapAreaSum", "stDiff", "sqDiff", "gooseLengthDiff", "cbStatusDiff",
         "apduSizeDiff", "frameLengthDiff", "timestampDiff", "tDiff", "timeFromLastChange", "delay"
     ]
-
-    # columns_to_remove = [
-    #    "Time", "isbA", "isbB", "isbC", "ismA", "ismB", "ismC", "vsbA", "vsbB", "vsbC", "vsmA", "vsmB", "vsmC",
-    #    "isbARmsValue", "isbBRmsValue", "iisbCRmsValue", "ismARmsValue", "ismBRmsValue", "ismCRmsValue",
-    #    "vsbARmsue", "vsbBRmsValue", "vsbCRmsValue", "vsmARmsValue", "vsmBRmsValue", "vsmCRmsValue",
-    #    "isbATrapAreaSum", "isbBTrapAreaSum", "isbCTrapAreaSum", "ismATrapAreaSuValm", "ismBTrapAreaSum",
-    #    "ismCTrapAreaSum", "vsbATrapAreaSum", "vsbBTrapAreaSum", "vsbCTrapAreaSum", "vsmATrapAreaSum",
-    #    "vsmBTrapAreaSum", "vsmCTrapAreaSum", "stDiff", "sqDiff", "gooseLengthDiff", "cbStatusDiff",
-    #    "apduSizeDiff", "frameLengthDiff", "timestampDiff", "tDiff", "timeFromLastChange", "delay"
-    #]
 
     initial_features_train = train_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
     initial_features_test = test_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
@@ -118,21 +107,9 @@ def preprocess_data(X_train, y_train, X_test, y_test):
     return y_train, y_test, X_train, X_test, le
 
 def calculate_metrics(y_true, y_pred):
-    # conf_matrix = confusion_matrix(y_true, y_pred)
-    # VN = conf_matrix[0, 0]
-    # FN = conf_matrix[0, 1:].sum()
-    # FP = conf_matrix[1:, 0].sum() + (conf_matrix[:, 1:].sum(axis=0) - np.diag(conf_matrix)[1:]).sum()
-    # VP = np.diag(conf_matrix)[1:].sum()
-    #
-    # accuracy = (VP + VN) / (VP + VN + FP + FN)
-    # precision = VP / (VP + FP) if (VP + FP) > 0 else 0
-    # recall = VP / (VP + FN) if (VP + FN) > 0 else 0
-    # # logging.info(f"VN: {VN}, FN: {FN}, VP: {VP}, FP: {FP}")
-    #
-    # f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-    f1 = f1_score(y_true, y_pred, average='binary')
+    f1 = f1_score(y_true, y_pred, average='weighted')
 
-    return f1#, conf_matrix
+    return f1
 
 def evaluate_model(classifier, X_train, y_train, X_test, y_test):
     # Train the classifier
@@ -142,12 +119,7 @@ def evaluate_model(classifier, X_train, y_train, X_test, y_test):
     y_pred = classifier.predict(X_test)
 
     # Calculate metrics
-    # accuracy, precision, recall, f1, conf_matrix = calculate_metrics(y_test, y_pred)
     f1 = calculate_metrics(y_test, y_pred)
-
-    # Print the confusion matrix and metrics
-    # logging.info(conf_matrix)
-    # logging.info(f"Accuracy: {accuracy * 100:.2f}%, Precision: {precision * 100:.2f}%, Recall: {recall * 100:.2f}%, F1-Score: {f1 * 100:.2f}%")
 
     return f1
 
@@ -168,7 +140,7 @@ def plot_solutions_with_priority(all_solutions, priority_queue):
     plt.legend(handles=[plt.Line2D([0], [0], marker='o', color='w', label='Top 10', markersize=10, markerfacecolor='red'),
                        plt.Line2D([0], [0], marker='o', color='w', label='Outras Soluções', markersize=10, markerfacecolor='blue')],
                loc='lower right')
-    plt.savefig(f"priority_plot_{timestamp}.png")
+    plt.savefig(f"priority_plot.png")
 
 
 def plot_solutions(all_solutions, priority_queue, local_search_improvements):
@@ -214,8 +186,10 @@ def plot_solutions(all_solutions, priority_queue, local_search_improvements):
     plt.tick_params(axis='y', labelsize=12)  # Aumenta o tamanho da fonte das marcações do eixo y
     plt.tight_layout()
 
-    plt.savefig(f"all_bestsolution_{timestamp}.png")
-    plt.savefig(f"all_bestsolution_{timestamp}.pdf")
+    plt.savefig(f"all_bestsolution.png")
+    plt.savefig(f"all_bestsolution.pdf")
+
+
 
 # Função para parsear argumentos da linha de comando
 def parse_args():
