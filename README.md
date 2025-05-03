@@ -1,11 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>GRASPQ-FS README</title>
-</head>
-<body>
-
 <h1 align="center">📌 Welcome to GRASPQ-FS! 📌</h1>
 
 <h4 align="left">
