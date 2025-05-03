@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from sklearn.linear_model import SGDClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -12,10 +13,8 @@ from sklearn.feature_selection import mutual_info_classif
 from sklearn.neighbors import KNeighborsClassifier
 import utils
 from priority_queue import MaxPriorityQueue
-import csv
 import logging
-timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-log_filename = f"log_{timestamp}.txt"
+log_filename = f"log.txt"
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)  # Nível de log (INFO, DEBUG, ERROR, etc.)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -49,21 +48,13 @@ def evaluate_algorithm(features_idx, algorithm):
 
     return utils.evaluate_model(model, X_train[features], y_train, X_test[features], y_test)
 
-def evaluate_baseline(feature_names, X_train, y_train, X_test, y_test):
-    logging.info("\nBaseline Evaluation with all algorithms using all features:")
-    algorithms = ['knn', 'nb']
-    baseline_results = {}
-    for algo in algorithms:
-        f1 = evaluate_algorithm(list(range(len(feature_names))), algo)
-        baseline_results[algo] = f1
-        logging.info(f"F1-Score {algo.upper()} using all features: {f1:.4f}")
+def evaluate_baseline(feature_names, X_train, y_train, X_test, y_test, algorithm):
+    logging.info("\nBaseline Evaluation with all features using the selected algorithm:")
+    f1 = evaluate_algorithm(list(range(len(feature_names))), algorithm)
+    logging.info(f"Baseline F1-Score ({algorithm.upper()}): {f1:.4f}")
     logging.info("-" * 50)
-    return baseline_results
+    return f1
 
-def log_to_csv(phase, initial_solution, initial_f1, improved_solution, improved_f1, best_f1, phase_time):
-    with open(log_file, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([phase, initial_solution, initial_f1, improved_solution, improved_f1, best_f1, phase_time])
 
 def load_and_preprocess():
     X_train, y_train, X_test, y_test = utils.load_data()
@@ -97,35 +88,36 @@ def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size
     for iteration in range(args.local_iterations):
         new_solution = best_solution.copy()
 
+        logging.info(
+            f"  → Local Iteration {iteration + 1}/{args.local_iterations} | Current best F1: {max_f1_score:.4f}")
+
         for replace_index in range(len(new_solution)):
             RCL = [feature_names.index(feature) for feature, score in sorted_features[:rcl_size]
                    if feature_names.index(feature) not in new_solution]
             if not RCL:
-                logging.info("RCL is empty. No replacement possible.")
+                logging.info("    ✖ RCL is empty. No replacement possible.")
                 break
 
             new_feature = random.choice(RCL)
             new_solution[replace_index] = new_feature
 
-        # Generated Neighbor Solution Log
-        # logging.info(f"Generated neighbor solution (Iteration {iteration + 1}): {new_solution}")
-
         new_solution_set = frozenset(new_solution)
         if new_solution_set in seen_solutions:
             repeated_solutions_count += 1
-            logging.info(f"Duplicate feature combination found: {new_solution_set}, generating a new solution...")
-            continue  # Ignora esta solução e continua a busca
+            logging.info(f"    ↺ Duplicate feature combination: {list(new_solution_set)} — Skipping")
+            continue
 
         f1_score = evaluate_algorithm(new_solution, algorithm)
-        # logging.info(f"F1-Score for neighbor solution: {f1_score}")
+        logging.info(f"    ✓ Evaluated F1-Score: {f1_score:.4f} for solution: {new_solution}")
 
         if f1_score > max_f1_score and new_solution_set != frozenset(best_solution):
             max_f1_score = f1_score
             best_solution = new_solution
             seen_solutions.add(new_solution_set)
-            logging.info(f"Improvement found! New best solution: {best_solution} with F1-Score: {max_f1_score}")
+            logging.info(
+                f"        Improvement found! New best solution: {best_solution} with F1-Score: {max_f1_score:.4f}")
         elif new_solution_set == frozenset(best_solution):
-            logging.info(f"No real improvement in the solution: {new_solution}")
+            logging.info("No real improvement (same as best solution)")
 
     logging.info(f"Local Search completed. Best F1-Score: {max_f1_score}, Best Solution: {best_solution}")
     return max_f1_score, best_solution, repeated_solutions_count
@@ -190,7 +182,6 @@ def construction(args):
                     priority_queue.insert((f1_score, solution))
         local_search_improvements[tuple(solution)] = 0
 
-        log_to_csv("Constructive Phase", solution, f1_score, None, None, max_f1_score, time.perf_counter() - start_time)
         # visualize_heap(priority_queue.heap)
     total_elapsed_time = time.perf_counter() - start_time
     logging.info(f"Total repeated initial solutions: {repeated_solutions_count}")
@@ -200,7 +191,7 @@ def construction(args):
 
     start_time = time.perf_counter()  # Local Search Phase
     total_iterations = len(priority_queue.heap) * args.local_iterations  # Total predicted iterations
-    current_iteration = 0
+    queue_progress = 0
 
     while not priority_queue.is_empty():
         _, current_solution = priority_queue.extract_max()
@@ -209,17 +200,14 @@ def construction(args):
         improved_f1_score, improved_solution, repeated_solutions_count_local_search = local_search(
         current_solution, repeated_solutions_count_local_search, args.algorithm, args.rcl_size)
 
-        log_to_csv("Local Search", current_solution, original_f1_score, improved_solution, improved_f1_score,
-                   max_f1_score, time.perf_counter() - start_time)
-
         # Increment iteration count
-        current_iteration += args.local_iterations
+        queue_progress += 1
 
-        # Progress log every 50 iterations
+        # Progress log
         elapsed_time = time.perf_counter() - start_time
-        estimated_total_time = (elapsed_time / current_iteration) * total_iterations
+        estimated_total_time = (elapsed_time / queue_progress) * total_iterations
         logging.info(
-            f"[{current_iteration}/{total_iterations}] Best solution: F1-Score {improved_f1_score:.4f} |"
+            f"[{queue_progress}/{args.priority_queue}] Best solution: F1-Score {improved_f1_score:.4f} |"
             f" Estimated remaining time: {estimated_total_time - elapsed_time:.2f}s")
 
         # Check if there was an improvement compared to the original F1-Score of the specific solution
@@ -251,8 +239,6 @@ def construction(args):
 
     logging.info(f"Total execution time for Constructive Phase: {total_elapsed_time} seconds")
     logging.info(f"Total execution time for Local Search Phase: {total_local_search_time} seconds")
-    log_to_csv("Summary Constructive Phase", None, None, None, None, max_f1_score, total_elapsed_time)
-    log_to_csv("Summary Local Search", None, None, None, None, max_f1_score, total_local_search_time)
 
 def print_priority_queue(priority_queue):
     logging.info("Priority Queue:")
@@ -271,12 +257,6 @@ if __name__ == '__main__':
     logging.info(f"  Constructive Iterations: {args.constructive_iterations}")
     logging.info("-" * 50)
 
-    log_file = f"graspq_results_rcl{args.rcl_size}_cc{args.constructive_iterations}_bs{args.priority_queue}_is{args.initial_solution}.csv"
-
-    with open(log_file, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["phase", "initial_solution", "initial_f1_score", "improved_f1_score", "phase_time"])
-
     # Load and preprocess the data
     X_train, y_train, X_test, y_test, feature_names, sorted_features, le = load_and_preprocess()
 
@@ -284,11 +264,12 @@ if __name__ == '__main__':
     print_feature_scores(sorted_features)
 
     # Initial evaluation (baseline)
-    # baseline_results = evaluate_baseline(feature_names, X_train, y_train, X_test, y_test)
+    baseline_f1 = evaluate_baseline(feature_names, X_train, y_train, X_test, y_test, args.algorithm)
 
     # Continue with the selected algorithm for the next steps
     logging.info(f"Selected algorithm for constructive and local search phases: {args.algorithm.upper()}")
 
     # Execute construction and local search
     construction(args)
+    logging.info(f"Baseline F1-Score (All Features with {args.algorithm.upper()}): {baseline_f1:.4f}")
 
