@@ -30,19 +30,19 @@ def evaluate_algorithm(features_idx, algorithm):
     if algorithm == 'knn':
         model = KNeighborsClassifier()
     elif algorithm == 'dt':
-        model = DecisionTreeClassifier()
+        model = DecisionTreeClassifier(random_state=42)
     elif algorithm == 'nb':
         model = GaussianNB(var_smoothing=1e-9)
     elif algorithm == 'svm':
         model = SVC()
     elif algorithm == 'rf':
-        model = RandomForestClassifier()
+        model = RandomForestClassifier(random_state=42)
     elif algorithm == 'xgboost':
-        model = xgb.XGBClassifier(eval_metric='mlogloss')
+        model = xgb.XGBClassifier(eval_metric='mlogloss', random_state=42)
     elif algorithm == 'linear_svc':
-        model = LinearSVC(max_iter=1000)
+        model = LinearSVC(max_iter=1000, random_state=42)
     elif algorithm == 'sgd':
-        model = SGDClassifier(max_iter=1000, tol=1e-3)
+        model = SGDClassifier(max_iter=1000, tol=1e-3, random_state=42)
     else:
         raise ValueError("Unsupported algorithm")
 
@@ -107,15 +107,17 @@ def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size
             logging.info(f"    ↺ Duplicate feature combination: {list(new_solution_set)} — Skipping")
             continue
 
+        sorted_indices = sorted(new_solution)
         f1_score = evaluate_algorithm(new_solution, algorithm)
-        logging.info(f"    ✓ Evaluated F1-Score: {f1_score:.4f} for solution: {new_solution}")
+        logging.info(f"    ✓ Evaluated F1-Score: {f1_score:.4f} for solution: {sorted_indices}")
 
         if f1_score > max_f1_score and new_solution_set != frozenset(best_solution):
             max_f1_score = f1_score
             best_solution = new_solution
             seen_solutions.add(new_solution_set)
+            sorted_best = sorted(best_solution)
             logging.info(
-                f"        Improvement found! New best solution: {best_solution} with F1-Score: {max_f1_score:.4f}")
+                f"        Improvement found! New best solution: {sorted_best} with F1-Score: {max_f1_score:.4f}")
         elif new_solution_set == frozenset(best_solution):
             logging.info("No real improvement (same as best solution)")
 
