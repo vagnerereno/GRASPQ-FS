@@ -7,6 +7,7 @@
 <h2>📁 Repository Structure</h2>
 <pre><code>.
 ├── data/                     # Folder for training and test datasets
+├── results/                  # Examples of logs and generated plots from execution
 ├── main.py                   # Main script to run the GRASPQ-FS algorithm
 ├── utils.py                  # Data loading, preprocessing, and evaluation helpers
 ├── priority_queue.py         # Custom max priority queue implementation
@@ -107,6 +108,7 @@ python main.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --loca
 <h2>📁 Estrutura do Repositório</h2>
 <pre><code>.
 ├── data/                     # Pasta com os conjuntos de dados de treino e teste
+├── results/                  # Exemplos de logs e gráficos gerados durante a execução
 ├── main.py                   # Script principal para executar o algoritmo GRASPQ-FS
 ├── utils.py                  # Funções auxiliares para carregamento, pré-processamento e avaliação dos dados
 ├── priority_queue.py         # Implementação personalizada de fila de prioridade máxima
