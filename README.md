@@ -32,6 +32,14 @@
 <tr><td>Python Version</td><td>3.10.0</td></tr>
 </table>
 
+<h3>⚙️ Development Environment</h3>
+<table border="1">
+<tr><th>Tool</th><th>Version</th></tr>
+<tr><td>Python</td><td>3.10.0</td></tr>
+<tr><td>Editor</td><td>VS Code / PyCharm</td></tr>
+<tr><td>Terminal</td><td>PowerShell or CMD</td></tr>
+</table>
+
 <h3>📝 Requirements</h3>
 <p>This Python project uses the following libraries:</p>
 <ul>
@@ -42,26 +50,30 @@
   <li>xgboost ≥ 1.5</li>
 </ul>
 
-<p>It is recommended to create a virtual environment:</p>
-<pre><code>python -m venv venv
+<h3>🚀 How to Run</h3>
+<p>To get started with this project, follow these steps:</p>
+<ol>
+  <li>
+    <strong>Clone this repository and enter the project folder:</strong>
+    <pre><code>git clone https://github.com/this-repository.git
+cd this-repository</code></pre>
+  </li>
+
+
+  <li>
+    <strong>Create a virtual environment (recommended):</strong>
+    <pre><code>python -m venv venv
 venv\Scripts\activate   # on Windows
-source venv/bin/activate  # on Unix/Mac
-</code></pre>
+source venv/bin/activate  # on Unix/Mac</code></pre>
+  </li>
 
-<p>To install all dependencies in virtual environment:</p>
-<pre><code>pip install -r requirements.txt</code></pre>
+  <li><strong>Install the dependencies:</strong></li>
+  <pre><code>pip install -r requirements.txt</code></pre>
 
-<h3>⚙️ Development Environment</h3>
-<table border="1">
-<tr><th>Tool</th><th>Version</th></tr>
-<tr><td>Python</td><td>3.10.0</td></tr>
-<tr><td>Editor</td><td>VS Code / PyCharm</td></tr>
-<tr><td>Terminal</td><td>PowerShell or CMD</td></tr>
-</table>
-
-<h3>👨‍💻 Usage Examples</h3>
-
-<p>Run the tool from the terminal using one of the following parameter combinations:</p>
+  <li><strong>Run the tool with the desired configuration:</strong></li>
+  <pre><code>python main_ereno.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100</code></pre>
+</ol>
+<h3>👨‍💻 Other Usage Examples</h3>
 
 <pre><code>
 python main_ereno.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100
@@ -120,6 +132,14 @@ python main_ereno.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 
 <tr><td>Versão do Python</td><td>3.10.0</td></tr>
 </table>
 
+<h3>⚙️ Ambiente de Desenvolvimento</h3>
+<table border="1">
+<tr><th>Ferramenta</th><th>Versão</th></tr>
+<tr><td>Python</td><td>3.10.0</td></tr>
+<tr><td>Editor</td><td>VS Code / PyCharm</td></tr>
+<tr><td>Terminal</td><td>PowerShell ou CMD</td></tr>
+</table>
+
 <h3>📝 Requisitos</h3>
 <p>O projeto utiliza Python 3 e as seguintes bibliotecas:</p>
 <ul>
@@ -130,25 +150,35 @@ python main_ereno.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 
   <li>xgboost ≥ 1.5</li>
 </ul>
 
-<p>É recomendável criar um ambiente virtual:</p>
-<pre><code>python -m venv venv
+<h3>🚀 Como Executar</h3>
+<p>Para começar a usar este projeto, siga os passos abaixo:</p>
+<ol>
+  <li>
+    <strong>Clone este repositório e entre na pasta do projeto:</strong>
+    <pre><code>git clone https://github.com/this-repository.git
+cd this-repository</code></pre>
+  </li>
+
+  <li>
+    <strong>Crie um ambiente virtual (recomendado):</strong>
+    <pre><code>python -m venv venv
 venv\Scripts\activate   # no Windows
-source venv/bin/activate  # no Unix/Mac
-</code></pre>
+source venv/bin/activate  # no Unix/Mac</code></pre>
+  </li>
 
-<p>Para instalar todas as dependências no ambiente virtual:</p>
-<pre><code>pip install -r requirements.txt</code></pre>
+  <li>
+    <strong>Instale as dependências:</strong>
+    <pre><code>pip install -r requirements.txt</code></pre>
+  </li>
 
-<h3>⚙️ Ambiente de Desenvolvimento</h3>
-<table border="1">
-<tr><th>Ferramenta</th><th>Versão</th></tr>
-<tr><td>Python</td><td>3.10.0</td></tr>
-<tr><td>Editor</td><td>VS Code / PyCharm</td></tr>
-<tr><td>Terminal</td><td>PowerShell ou CMD</td></tr>
-</table>
+  <li>
+    <strong>Execute a ferramenta com a configuração desejada:</strong>
+    <pre><code>python main_ereno.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100</code></pre>
+  </li>
+</ol>
 
-<h3>👨‍💻 Exemplo de Uso</h3>
-<p>Execute a ferramenta no terminal usando uma das combinações de parâmetros abaixo:</p>
+
+<h3>👨‍💻 Outros Exemplos de Uso</h3>
 
 <pre><code>
 python main_ereno.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100
