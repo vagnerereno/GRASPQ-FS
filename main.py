@@ -14,7 +14,7 @@ from sklearn.neighbors import KNeighborsClassifier
 import utils
 from priority_queue import MaxPriorityQueue
 import logging
-log_filename = f"log.txt"
+log_filename = f"results/log.txt"
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)  # Nível de log (INFO, DEBUG, ERROR, etc.)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
