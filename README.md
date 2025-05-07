@@ -71,16 +71,16 @@ source venv/bin/activate  # on Unix/Mac</code></pre>
   <pre><code>pip install -r requirements.txt</code></pre>
 
   <li><strong>Run the tool with the desired configuration:</strong></li>
-  <pre><code>python main_ereno.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100</code></pre>
+  <pre><code>python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100</code></pre>
 </ol>
 <h3>👨‍💻 Other Usage Examples</h3>
 
 <pre><code>
-python main_ereno.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100
+python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100
 or
-python main_ereno.py --algorithm nb --rcl_size 10 --init_sol 5 --pq_size 10 --ls 50 --const 100
+python main.py --algorithm nb --rcl_size 10 --init_sol 5 --pq_size 10 --ls 50 --const 100
 or
-python main_ereno.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --local_iterations 50 --constructive_iterations 100
+python main.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --local_iterations 50 --constructive_iterations 100
 </code></pre>
 
 <p><strong>Parameters (with all aliases):</strong></p>
@@ -173,7 +173,7 @@ source venv/bin/activate  # no Unix/Mac</code></pre>
 
   <li>
     <strong>Execute a ferramenta com a configuração desejada:</strong>
-    <pre><code>python main_ereno.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100</code></pre>
+    <pre><code>python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100</code></pre>
   </li>
 </ol>
 
@@ -181,11 +181,11 @@ source venv/bin/activate  # no Unix/Mac</code></pre>
 <h3>👨‍💻 Outros Exemplos de Uso</h3>
 
 <pre><code>
-python main_ereno.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100
+python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100
 ou
-python main_ereno.py --algorithm nb --rcl_size 10 --init_sol 5 --pq_size 10 --ls 50 --const 100
+python main.py --algorithm nb --rcl_size 10 --init_sol 5 --pq_size 10 --ls 50 --const 100
 ou
-python main_ereno.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --local_iterations 50 --constructive_iterations 100
+python main.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --local_iterations 50 --constructive_iterations 100
 </code></pre>
 
 <p><strong>Parâmetros (com todos os aliases):</strong></p>
