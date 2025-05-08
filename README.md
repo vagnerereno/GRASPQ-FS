@@ -1,14 +1,14 @@
-<h1 align="center">📌 Welcome to GRASPQ-FS! 📌</h1>
+<h1 align="center">📌 Welcome to XXXXX-FS! 📌</h1>
 
 <h4 align="left">
-✔️ GRASPQ-FS is a command-line tool that applies the GRASP metaheuristic with a priority queue to perform feature selection in Intrusion Detection Systems (IDS). It was designed to work with enriched datasets, focusing on performance and reproducibility.
+✔️ XXXXX-FS is a command-line tool that applies the GRASP metaheuristic with a priority queue to perform feature selection in Intrusion Detection Systems (IDS). It was designed to work with enriched datasets, focusing on performance and reproducibility.
 </h4>
 
 <h2>📁 Repository Structure</h2>
 <pre><code>.
 ├── data/                     # Folder for training and test datasets
 ├── results/                  # Examples of logs and generated plots from execution
-├── main.py                   # Main script to run the GRASPQ-FS algorithm
+├── main.py                   # Main script to run the XXXXX-FS algorithm
 ├── utils.py                  # Data loading, preprocessing, and evaluation helpers
 ├── priority_queue.py         # Custom max priority queue implementation
 ├── requirements.txt          # List of required Python packages
@@ -99,17 +99,17 @@ python main.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --loca
 <hr>
 
 <a name="portuguese"></a>
-<h1 align="center">📌 Bem-vindo ao GRASPQ-FS! 📌</h1>
+<h1 align="center">📌 Bem-vindo ao XXXXX-FS! 📌</h1>
 
 <h4 align="left">
-✔️ O GRASPQ-FS é uma ferramenta de linha de comando que aplica a metaheurística GRASP com fila de prioridades para seleção de atributos em sistemas de detecção de intrusos (IDS). Foi projetada para trabalhar com datasets enriquecidos, com foco em desempenho e reprodutibilidade.
+✔️ O XXXXX-FS é uma ferramenta de linha de comando que aplica a metaheurística GRASP com fila de prioridades para seleção de atributos em sistemas de detecção de intrusão (IDS). Foi projetada para trabalhar com datasets enriquecidos, com foco em desempenho e reprodutibilidade.
 </h4>
 
 <h2>📁 Estrutura do Repositório</h2>
 <pre><code>.
 ├── data/                     # Pasta com os conjuntos de dados de treino e teste
 ├── results/                  # Exemplos de logs e gráficos gerados durante a execução
-├── main.py                   # Script principal para executar o algoritmo GRASPQ-FS
+├── main.py                   # Script principal para executar o algoritmo XXXXX-FS
 ├── utils.py                  # Funções auxiliares para carregamento, pré-processamento e avaliação dos dados
 ├── priority_queue.py         # Implementação personalizada de fila de prioridade máxima
 ├── requirements.txt          # Lista de pacotes Python necessários
