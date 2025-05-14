@@ -91,6 +91,11 @@ python main.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --loca
 <p>This option is useful for fast execution without installing dependencies:</p>
 <ol>
   <li>
+    <strong>Clone this repository and enter the project folder:</strong>
+    <pre><code>git clone https://github.com/this-repository.git
+cd this-repository</code></pre>
+  </li>
+  <li>
     <strong>Build the Docker image:</strong>
     <pre><code>docker build -t main .</code></pre>
   </li>
@@ -209,6 +214,11 @@ python main.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --loca
 <h4>🐳 Opção 2: Execução via Docker (Sem Dependências Locais)</h4>
 <p>Esta opção é útil para execução rápida sem precisar instalar o Python ou as bibliotecas:</p>
 <ol>
+  <li>
+    <strong>Clone este repositório e entre na pasta do projeto:</strong>
+    <pre><code>git clone https://github.com/this-repository.git
+cd this-repository</code></pre>
+  </li>
   <li>
     <strong>Construa a imagem Docker:</strong>
     <pre><code>docker build -t main .</code></pre>
