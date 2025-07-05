@@ -1,7 +1,7 @@
-<h1 align="center">📌 Welcome to XXXXX-FS! 📌</h1>
+<h1 align="center">📌 Welcome to GRASPQ-FS Tool! 📌</h1>
 
 <h4 align="left">
-✔️ XXXXX-FS is a command-line tool that applies the GRASP metaheuristic with a priority queue to perform feature selection in Intrusion Detection Systems (IDS). It was designed to work with enriched datasets, focusing on performance and reproducibility.
+✔️ GRASPQ-FS Tool is a command-line tool that applies the GRASP metaheuristic with a priority queue to perform feature selection in Intrusion Detection Systems (IDS). It was designed to work with enriched datasets, focusing on performance and reproducibility.
 </h4>
 
 <h2>📁 Repository Structure</h2>
@@ -9,7 +9,7 @@
 ├── data/                     # Folder for training and test datasets
 ├── results/                  # Examples of logs and generated plots from execution
 ├── Dockerfile                # Optional Docker image for containerized execution
-├── main.py                   # Main script to run the XXXXX-FS algorithm
+├── main.py                   # Main script to run the GRASPQ-FS algorithm
 ├── utils.py                  # Data loading, preprocessing, and evaluation helpers
 ├── priority_queue.py         # Custom max priority queue implementation
 ├── requirements.txt          # List of required Python packages
@@ -53,7 +53,7 @@
 </ul>
 
 <h4>🎥 Quick Demonstration (Video)</h4>
-<p>Watch a short video (5–6 min) demonstrating how to install and run XXXXX-FS in practice:</p>
+<p>Watch a short video (5–6 min) demonstrating how to install and run GRASPQ-FS Tool in practice:</p>
 <p><a href="https://drive.google.com/file/d/1y3AHiyWszxBx_ExasQJ8SijLP_A3XX2t" target="_blank">📎 Click here to view the video demonstration</a></p>
 
 
@@ -127,10 +127,10 @@ cd this-repository</code></pre>
 <hr>
 
 <a name="portuguese"></a>
-<h1 align="center">📌 Bem-vindo ao XXXXX-FS! 📌</h1>
+<h1 align="center">📌 Bem-vindo ao GRASPQ-FS Tool! 📌</h1>
 
 <h4 align="left">
-✔️ O XXXXX-FS é uma ferramenta de linha de comando que aplica a metaheurística GRASP com fila de prioridades para seleção de atributos em sistemas de detecção de intrusão (IDS). Foi projetada para trabalhar com datasets enriquecidos, com foco em desempenho e reprodutibilidade.
+✔️ O GRASPQ-FS Tool é uma ferramenta de linha de comando que aplica a metaheurística GRASP com fila de prioridades para seleção de atributos em sistemas de detecção de intrusão (IDS). Foi projetada para trabalhar com datasets enriquecidos, com foco em desempenho e reprodutibilidade.
 </h4>
 
 <h2>📁 Estrutura do Repositório</h2>
@@ -138,7 +138,7 @@ cd this-repository</code></pre>
 ├── data/                     # Pasta com os conjuntos de dados de treino e teste
 ├── results/                  # Exemplos de logs e gráficos gerados durante a execução
 ├── Dockerfile                # Imagem Docker opcional para execução containerizada
-├── main.py                   # Script principal para executar o algoritmo XXXXX-FS
+├── main.py                   # Script principal para executar o algoritmo GRASPQ-FS
 ├── utils.py                  # Funções auxiliares para carregamento, pré-processamento e avaliação dos dados
 ├── priority_queue.py         # Implementação personalizada de fila de prioridade máxima
 ├── requirements.txt          # Lista de pacotes Python necessários
@@ -182,7 +182,7 @@ cd this-repository</code></pre>
 </ul>
 
 <h4>🎥 Demonstração Rápida (Vídeo)</h4>
-<p>Assista a um vídeo curto (5–6 min) demonstrando como instalar e executar o XXXXX-FS na prática:</p>
+<p>Assista a um vídeo curto (5–6 min) demonstrando como instalar e executar o GRASPQ-FS Tool na prática:</p>
 <p><a href="https://drive.google.com/file/d/1y3AHiyWszxBx_ExasQJ8SijLP_A3XX2t" target="_blank">📎 Clique aqui para ver a demonstração em vídeo</a></p>
 
 
