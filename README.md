@@ -104,7 +104,7 @@ source venv/bin/activate  # no Unix/Mac</code></pre>
   </li>
   <li>
     <strong>Execute a ferramenta com a configuração desejada:</strong>
-    <pre><code>python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100</code></pre>
+    <pre><code>python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 50</code></pre>
   </li>
 </ol>
 
@@ -230,7 +230,7 @@ source venv/bin/activate  # on Unix/Mac</code></pre>
   </li>
   <li>
     <strong>Run the tool with the desired configuration:</strong>
-    <pre><code>python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100</code></pre>
+    <pre><code>python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 50</code></pre>
   </li>
 </ol>
 
