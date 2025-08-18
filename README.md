@@ -114,7 +114,7 @@ python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100
 ou
 python main.py --algorithm nb --rcl_size 10 --init_sol 5 --pq_size 10 --ls 50 --const 100
 ou
-python main.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --local_iterations 50 --constructive_iterations 100
+python main.py --alg nb --rcl 10 --initial_solution 5 --priority_queue 10 --local_iterations 50 --constructive_iterations 100
 </code></pre>
 
 <h4>🐳 Opção 2: Execução via Docker (Sem Dependências Locais)</h4>
@@ -240,7 +240,7 @@ python main.py -a nb -rcl 10 -is 5 -pq 10 -lc 50 -cc 100
 or
 python main.py --algorithm nb --rcl_size 10 --init_sol 5 --pq_size 10 --ls 50 --const 100
 or
-python main.py --alg nb --rcl 10 --initial_solution 5 --priority-queue 10 --local_iterations 50 --constructive_iterations 100
+python main.py --alg nb --rcl 10 --initial_solution 5 --priority_queue 10 --local_iterations 50 --constructive_iterations 100
 </code></pre>
 
 <h4>🐳 Option 2: Run with Docker (No Python Installation Required)</h4>
