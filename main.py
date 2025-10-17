@@ -1,279 +1,245 @@
-import datetime
-import json
+# main.py
 
-from sklearn.linear_model import SGDClassifier
-from sklearn.tree import DecisionTreeClassifier
-import random
 import time
-from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC, LinearSVC
-import xgboost as xgb
+import random
+import logging
+from collections import Counter
+
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder
 from sklearn.feature_selection import mutual_info_classif
+
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC, LinearSVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import SGDClassifier
+import xgboost as xgb
+
 import utils
 from priority_queue import MaxPriorityQueue
-import logging
-log_filename = f"results/log.txt"
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)  # Nível de log (INFO, DEBUG, ERROR, etc.)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler = logging.FileHandler(log_filename, mode='w', encoding='utf-8')
-file_handler.setFormatter(formatter)
-console_handler = logging.StreamHandler()  # Exibe no terminal
-console_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
 
-def evaluate_algorithm(features_idx, algorithm):
+
+def evaluate_algorithm(features_idx, algorithm, X_train_fold, y_train_fold, X_val_fold, y_val_fold, feature_names):
+    """Evaluates a subset of features using a specified ML algorithm for a given data fold."""
     features = [feature_names[i] for i in features_idx]
+
     if algorithm == 'knn':
         model = KNeighborsClassifier()
     elif algorithm == 'dt':
         model = DecisionTreeClassifier(random_state=42)
     elif algorithm == 'nb':
-        model = GaussianNB(var_smoothing=1e-9)
+        model = GaussianNB()
     elif algorithm == 'svm':
-        model = SVC()
+        model = SVC(random_state=42)
     elif algorithm == 'rf':
         model = RandomForestClassifier(random_state=42)
     elif algorithm == 'xgboost':
-        model = xgb.XGBClassifier(eval_metric='mlogloss', random_state=42)
+        model = xgb.XGBClassifier(eval_metric='mlogloss', use_label_encoder=False, random_state=42)
     elif algorithm == 'linear_svc':
-        model = LinearSVC(max_iter=1000, random_state=42)
+        model = LinearSVC(max_iter=2000, random_state=42, dual=True)
     elif algorithm == 'sgd':
         model = SGDClassifier(max_iter=1000, tol=1e-3, random_state=42)
     else:
-        raise ValueError("Unsupported algorithm")
+        raise ValueError(f"Unsupported algorithm: {algorithm}")
 
-    return utils.evaluate_model(model, X_train[features], y_train, X_test[features], y_test)
-
-def evaluate_baseline(feature_names, X_train, y_train, X_test, y_test, algorithm):
-    logging.info("\nBaseline Evaluation with all features using the selected algorithm:")
-    f1 = evaluate_algorithm(list(range(len(feature_names))), algorithm)
-    logging.info(f"Baseline F1-Score ({algorithm.upper()}): {f1:.4f}")
-    logging.info("-" * 50)
-    return f1
+    return utils.evaluate_model(model, X_train_fold[features], y_train_fold, X_val_fold[features], y_val_fold)
 
 
-def load_and_preprocess():
-    X_train, y_train, X_test, y_test = utils.load_data()
-    y_train, y_test, X_train, X_test, le = utils.preprocess_data(X_train, y_train, X_test, y_test)
-    logging.info("Preprocessing completed successfully.")
-    feature_names = X_train.columns.tolist()
-
-    logging.info("Ranking Features using Mutual Information for composing RCL.")
-    # Mutual Information (MI) measures the mutual dependence between two random variables.
-    # In the context of feature selection, it evaluates how much information about the label
-    # is provided by a particular feature.
-    ig_scores = mutual_info_classif(X_train, y_train, random_state=42)
-    logging.info("Feature ranking completed.")
-
-    sorted_features = sorted(zip(feature_names, ig_scores), key=lambda x: x[1], reverse=True)
-
-    return X_train, y_train, X_test, y_test, feature_names, sorted_features, le
-
-def print_feature_scores(sorted_features):
-    logging.info("\nMutua Information for Features:")
-    for feature, score in sorted_features:
-        logging.info(f"Feature {feature}: MI = {score:.4f}")
-
-def local_search(initial_solution, repeated_solutions_count, algorithm, rcl_size):
-    max_f1_score = evaluate_algorithm(initial_solution, algorithm)
+def local_search(initial_solution, algorithm, args, X_train_fold, y_train_fold, X_val_fold, y_val_fold, feature_names,
+                 sorted_features):
+    """Performs local search to improve an initial solution, with detailed logging at DEBUG level."""
+    logger = logging.getLogger()
+    max_f1_score = evaluate_algorithm(initial_solution, algorithm, X_train_fold, y_train_fold, X_val_fold, y_val_fold,
+                                      feature_names)
     best_solution = initial_solution.copy()
     seen_solutions = {frozenset(initial_solution)}
 
-    logging.info(f"Starting Local Search with initial solution: {initial_solution}, F1-Score: {max_f1_score}")
+    logger.debug(f"    [Local Search] Starting for solution {best_solution} | Initial F1-Score: {max_f1_score:.4f}")
 
     for iteration in range(args.local_iterations):
-        new_solution = best_solution.copy()
-
-        logging.info(
-            f"  → Local Iteration {iteration + 1}/{args.local_iterations} | Current best F1: {max_f1_score:.4f}")
-
-        for replace_index in range(len(new_solution)):
-            RCL = [feature_names.index(feature) for feature, score in sorted_features[:rcl_size]
-                   if feature_names.index(feature) not in new_solution]
-            if not RCL:
-                logging.info("    ✖ RCL is empty. No replacement possible.")
-                break
-
-            new_feature = random.choice(RCL)
-            new_solution[replace_index] = new_feature
-
-        new_solution_set = frozenset(new_solution)
-        if new_solution_set in seen_solutions:
-            repeated_solutions_count += 1
-            logging.info(f"    ↺ Duplicate feature combination: {list(new_solution_set)} — Skipping")
+        current_solution = best_solution.copy()
+        replace_index = random.randrange(len(current_solution))
+        rcl_indices = [feature_names.index(feat) for feat, _ in sorted_features[:args.rcl_size]]
+        candidate_features = [idx for idx in rcl_indices if idx not in current_solution]
+        if not candidate_features:
+            logger.debug(f"      [LS Iteration {iteration + 1}] RCL is empty, cannot find new features.")
+            break
+        new_feature = random.choice(candidate_features)
+        neighbor_solution = current_solution[:]
+        neighbor_solution[replace_index] = new_feature
+        neighbor_solution.sort()
+        if frozenset(neighbor_solution) in seen_solutions:
             continue
-
-        sorted_indices = sorted(new_solution)
-        f1_score = evaluate_algorithm(new_solution, algorithm)
-        logging.info(f"    ✓ Evaluated F1-Score: {f1_score:.4f} for solution: {sorted_indices}")
-
-        if f1_score > max_f1_score and new_solution_set != frozenset(best_solution):
+        seen_solutions.add(frozenset(neighbor_solution))
+        f1_score = evaluate_algorithm(neighbor_solution, algorithm, X_train_fold, y_train_fold, X_val_fold, y_val_fold,
+                                      feature_names)
+        logger.debug(
+            f"      [LS Iteration {iteration + 1}/{args.local_iterations}] Neighbor {neighbor_solution} -> F1-Score: {f1_score:.4f}")
+        if f1_score > max_f1_score:
             max_f1_score = f1_score
-            best_solution = new_solution
-            seen_solutions.add(new_solution_set)
-            sorted_best = sorted(best_solution)
-            logging.info(
-                f"        Improvement found! New best solution: {sorted_best} with F1-Score: {max_f1_score:.4f}")
-        elif new_solution_set == frozenset(best_solution):
-            logging.info("No real improvement (same as best solution)")
+            best_solution = neighbor_solution
+            logger.debug(
+                f"        >>> Improvement found! New best F1: {max_f1_score:.4f} with solution {best_solution}")
 
-    logging.info(f"Local Search completed. Best F1-Score: {max_f1_score}, Best Solution: {best_solution}")
-    return max_f1_score, best_solution, repeated_solutions_count
+    return max_f1_score, best_solution
 
-def construction(args):
-    # 'sorted_features' is a list of tuples (feature, IG) sorted by IG. Picking the top X to compose the RCL.
-    RCL = [feature for feature, _ in sorted_features[:args.rcl_size]]
 
-    RCL_indices = [feature_names.index(feature) for feature in RCL]
-
-    logging.info(f"RCL Features: {RCL}")
-    logging.info(f"RCL Feature Indices: {RCL_indices}")
-
-    all_solutions = []
-    local_search_improvements = {}  # Dictionary to store results of local search
-
+def construction(args, X_train_fold, y_train_fold, X_val_fold, y_val_fold, feature_names, sorted_features, fold_number):
+    """GRASP construction and local search phases for a single fold, with detailed logging."""
+    logger = logging.getLogger()
+    RCL_FEATURES = [feature for feature, _ in sorted_features[:args.rcl_size]]
     priority_queue = MaxPriorityQueue()
     max_f1_score = -1
-    best_solution = []
+    best_overall_solution = []
 
-    seen_initial_solutions = set()
-    repeated_solutions_count = 0  # Initialize the counter for repeated solutions
-    repeated_solutions_count_local_search = 0  # Initialize the counter for repeated solutions during local search
+    logger.info(f"  [Constructive Phase] Starting...")
+    start_time_construction = time.perf_counter()
 
-    start_time = time.perf_counter()
+    for i in range(args.constructive_iterations):
+        selected_features_names = random.sample(RCL_FEATURES, k=args.initial_solution)
+        solution_indices = sorted([feature_names.index(name) for name in selected_features_names])
+        f1_score = evaluate_algorithm(solution_indices, args.algorithm, X_train_fold, y_train_fold, X_val_fold,
+                                      y_val_fold, feature_names)
+        logger.debug(
+            f"    [Constructive Iteration {i + 1}/{args.constructive_iterations}] Solution {solution_indices} -> F1-Score: {f1_score:.4f}")
+        priority_queue.insert((f1_score, solution_indices))
 
-    if args.rcl_size > len(feature_names):
-        raise ValueError("The RCL size cannot exceed the number of available features.")
-    if args.initial_solution > args.rcl_size:
-        raise ValueError("The initial solution size cannot exceed the RCL size.")
+    construction_time = time.perf_counter() - start_time_construction
+    logger.info(f"  [Constructive Phase] Finished in {construction_time:.2f}s.")
 
-    for iteration in range(args.constructive_iterations):
-        # Ensure the initial solution is unique
-        while True:
-            # Randomly select k features from RCL to generate initial solutions
-            selected_features = random.sample(RCL, k=args.initial_solution)
-            # Convert feature names into indices
-            solution = [feature_names.index(feature_name) for feature_name in selected_features]
-            solution_set = frozenset(selected_features)
+    best_solutions_for_ls = []
+    while not priority_queue.is_empty() and len(best_solutions_for_ls) < args.priority_queue:
+        best_solutions_for_ls.append(priority_queue.extract_max())
 
-            if solution_set not in seen_initial_solutions:
-                seen_initial_solutions.add(solution_set)
-                break
-            else:
-                repeated_solutions_count += 1  # Incrementa o contador
-                logging.info(f"Repeated initial solution found: {solution}, generating a new solution...")
+    logger.info(f"  Top {len(best_solutions_for_ls)} solutions from Priority Queue selected for Local Search:")
+    for f1, sol in best_solutions_for_ls:
+        logger.debug(f"    - Solution: {sol}, F1-Score: {f1:.4f}")
 
-        f1_score = evaluate_algorithm(solution, args.algorithm)
-        logging.info(f"F1-Score: {f1_score} for solution: {solution}")
-        all_solutions.append((iteration, f1_score, solution))
+    start_time_ls = time.perf_counter()
+    logger.info(f"  [Local Search Phase] Starting...")
 
-        if f1_score > 0.0:
-            # If the priority queue is not full, simply insert the new F1-Score.
-            if len(priority_queue.heap) < args.priority_queue:
-                priority_queue.insert((f1_score, solution))
-            else:
-                # If the priority queue is full, find the lowest F1-Score in the queue.
-                lowest_f1 = min(priority_queue.heap, key=lambda x: x[0])[0]
-                if f1_score > lowest_f1:
-                    # Remove the item with the lowest F1-Score before inserting the new item.
-                    priority_queue.heap.remove((lowest_f1, [item[1] for item in priority_queue.heap if item[0] == lowest_f1][0]))
-                    priority_queue.insert((f1_score, solution))
-        local_search_improvements[tuple(solution)] = 0
+    for initial_f1, solution in best_solutions_for_ls:
+        improved_f1, improved_solution = local_search(
+            solution, args.algorithm, args,
+            X_train_fold, y_train_fold, X_val_fold, y_val_fold,
+            feature_names, sorted_features
+        )
+        if improved_f1 > max_f1_score:
+            max_f1_score = improved_f1
+            best_overall_solution = improved_solution
 
-        # visualize_heap(priority_queue.heap)
-    total_elapsed_time = time.perf_counter() - start_time
-    logging.info(f"Total repeated initial solutions: {repeated_solutions_count}")
-    logging.info(f"Total execution time for Constructive Phase: {total_elapsed_time} seconds")
-    print_priority_queue(priority_queue)
-    utils.plot_solutions_with_priority(all_solutions, priority_queue)
+    local_search_time = time.perf_counter() - start_time_ls
+    logger.info(f"  [Local Search Phase] Finished in {local_search_time:.2f}s.")
 
-    start_time = time.perf_counter()  # Local Search Phase
-    total_iterations = len(priority_queue.heap) * args.local_iterations  # Total predicted iterations
-    queue_progress = 0
+    best_feature_names = sorted([feature_names[i] for i in best_overall_solution])
+    logger.info(f"Best solution in fold {fold_number + 1}: F1={max_f1_score:.4f}, Features={best_feature_names}")
 
-    priority_queue_snapshot = list(priority_queue.heap) # saves priority solutions
+    return max_f1_score, best_overall_solution, construction_time, local_search_time
 
-    while not priority_queue.is_empty():
-        _, current_solution = priority_queue.extract_max()
 
-        original_f1_score = evaluate_algorithm(current_solution, args.algorithm)  # Evaluate the current solution once
-        improved_f1_score, improved_solution, repeated_solutions_count_local_search = local_search(
-        current_solution, repeated_solutions_count_local_search, args.algorithm, args.rcl_size)
+def print_feature_scores(sorted_features):
+    logger = logging.getLogger()
+    logger.info("Feature ranking complete. Detailed scores saved to the log file.")
 
-        # Increment iteration count
-        queue_progress += 1
+    logger.debug("--- Mutual Information Feature Scores ---")
+    for feature, score in sorted_features:
+        logger.debug(f"  Feature: {feature:<40} MI = {score:.4f}")
+    logger.debug("---------------------------------------")
 
-        # Progress log
-        elapsed_time = time.perf_counter() - start_time
-        estimated_total_time = (elapsed_time / queue_progress) * total_iterations
-        logging.info(
-            f"[{queue_progress}/{args.priority_queue}] Best solution: F1-Score {improved_f1_score:.4f} |"
-            f" Estimated remaining time: {estimated_total_time - elapsed_time:.2f}s")
 
-        # Check if there was an improvement compared to the original F1-Score of the specific solution
-        if improved_f1_score > original_f1_score:
-            local_search_improvements[tuple(current_solution)] = improved_f1_score - original_f1_score
-            logging.info(f"Improvement in Local Search! F1-Score: {improved_f1_score} for solution: {current_solution}. New solution: {improved_solution}")
+def run_single_experiment(args):
+    """
+    Executes a complete cross-validation experiment for a given set of parameters.
+    Uses the logger that was configured by the calling script.
+    Returns a dictionary with the consolidated results.
+    """
+    logger = logging.getLogger()
+    logger.info(f"Starting experiment with parameters: {vars(args)}")
 
-        # Check if the improved solution is the global best solution
-        if improved_f1_score > max_f1_score:
-            max_f1_score = improved_f1_score
-            best_solution = improved_solution
-            logging.info(f"New Global Best Solution! F1-Score: {max_f1_score} for solution: {best_solution}")
+    X, y = utils.load_unified_dataset()
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
+    X_for_ranking = pd.get_dummies(X)
+    feature_names_ranked = X_for_ranking.columns.tolist()
+    logger.info("Ranking all features using Mutual Information...")
+    ig_scores = mutual_info_classif(X_for_ranking, y_encoded, random_state=42)
+    sorted_features = sorted(zip(feature_names_ranked, ig_scores), key=lambda x: x[1], reverse=True)
 
-    total_local_search_time = time.perf_counter() - start_time  # Busca Local
+    print_feature_scores(sorted_features)
 
-    utils.plot_solutions(all_solutions, priority_queue_snapshot, local_search_improvements)
+    skf = StratifiedKFold(n_splits=args.k_folds, shuffle=True, random_state=42)
+    fold_f1_scores, fold_construction_times, fold_ls_times = [], [], []
+    best_overall_f1 = -1
+    best_overall_solution_info = {}
 
-    logging.info(f"Total repeated solutions in local search: {repeated_solutions_count_local_search}")
-    logging.info(f"Initial Solution Size: {selected_features}")
-    logging.info(f"RCL Size: {len(RCL)}")
-    logging.info(f"Best F1-Score: {max_f1_score}")
-    logging.info(f"Best Feature Set (indices): {best_solution}")
+    for fold, (train_index, val_index) in enumerate(skf.split(X, y_encoded)):
+        logger.info(f"========== EXECUTING FOLD {fold + 1}/{args.k_folds} ==========")
+        X_train_fold, X_val_fold = X.iloc[train_index], X.iloc[val_index]
+        y_train_fold, y_val_fold = y_encoded[train_index], y_encoded[val_index]
 
-    # Map indices to feature names
-    best_feature_names = [(feature_names[i], i) for i in best_solution]
-    formatted_best_features = ", ".join([f"'{name}' ({index})" for name, index in best_feature_names])
+        num_cols = X_train_fold.select_dtypes(include=np.number).columns.tolist()
+        cat_cols = X_train_fold.select_dtypes(exclude=np.number).columns.tolist()
+        scaler = StandardScaler()
+        X_train_num_scaled = pd.DataFrame(scaler.fit_transform(X_train_fold[num_cols]), columns=num_cols,
+                                          index=X_train_fold.index)
+        X_val_num_scaled = pd.DataFrame(scaler.transform(X_val_fold[num_cols]), columns=num_cols,
+                                        index=X_val_fold.index)
+        X_train_cat_encoded = X_train_fold[cat_cols]
+        X_val_cat_encoded = X_val_fold[cat_cols]
+        if cat_cols:
+            encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+            X_train_cat_encoded = pd.DataFrame(encoder.fit_transform(X_train_fold[cat_cols]),
+                                               columns=encoder.get_feature_names_out(cat_cols),
+                                               index=X_train_fold.index)
+            X_val_cat_encoded = pd.DataFrame(encoder.transform(X_val_fold[cat_cols]),
+                                             columns=encoder.get_feature_names_out(cat_cols), index=X_val_fold.index)
+        X_train_processed = pd.concat([X_train_num_scaled, X_train_cat_encoded], axis=1)
+        X_val_processed = pd.concat([X_val_num_scaled, X_val_cat_encoded], axis=1)
+        feature_names_fold = X_train_processed.columns.tolist()
+        ig_scores_fold = mutual_info_classif(X_train_processed, y_train_fold, random_state=42)
+        sorted_features_fold = sorted(zip(feature_names_fold, ig_scores_fold), key=lambda x: x[1], reverse=True)
 
-    logging.info(f"Best Feature Set (names): {formatted_best_features}")
+        best_f1, best_solution_indices, const_time, ls_time = construction(
+            args, X_train_processed, y_train_fold, X_val_processed, y_val_fold,
+            feature_names_fold, sorted_features_fold, fold
+        )
 
-    logging.info(f"Total execution time for Constructive Phase: {total_elapsed_time} seconds")
-    logging.info(f"Total execution time for Local Search Phase: {total_local_search_time} seconds")
+        fold_f1_scores.append(best_f1)
+        fold_construction_times.append(const_time)
+        fold_ls_times.append(ls_time)
 
-def print_priority_queue(priority_queue):
-    logging.info("Priority Queue:")
-    for score, solution in priority_queue.heap:
-        logging.info(f"F1-Score: {-score}, Solution: {solution}")
+        if best_f1 > best_overall_f1:
+            best_overall_f1 = best_f1
+            best_overall_solution_info = {
+                'fold': fold + 1, 'f1_score': best_f1,
+                'features': [feature_names_fold[i] for i in best_solution_indices]
+            }
+
+    results = {
+        "mean_f1_score": np.mean(fold_f1_scores),
+        "std_f1_score": np.std(fold_f1_scores),
+        "mean_construction_time": np.mean(fold_construction_times),
+        "std_construction_time": np.std(fold_construction_times),
+        "mean_ls_time": np.mean(fold_ls_times),
+        "std_ls_time": np.std(fold_ls_times),
+        "best_f1_overall": best_overall_f1,
+        "best_solution_features": best_overall_solution_info.get('features')
+    }
+
+    logger.info("========== EXPERIMENT RESULTS ==========")
+    for key, value in results.items():
+        if isinstance(value, float):
+            logger.info(f"  {key}: {value:.4f}")
+        else:
+            logger.info(f"  {key}: {value}")
+
+    return results
 
 if __name__ == '__main__':
     args = utils.parse_args()
-
-    logging.info("Execution parameters:")
-    logging.info(f"  Algorithm: {args.algorithm}")
-    logging.info(f"  RCL Size: {args.rcl_size}")
-    logging.info(f"  Initial Solution Size: {args.initial_solution}")
-    logging.info(f"  Priority Queue Size: {args.priority_queue}")
-    logging.info(f"  Local Search Iterations: {args.local_iterations}")
-    logging.info(f"  Constructive Iterations: {args.constructive_iterations}")
-    logging.info("-" * 50)
-
-    # Load and preprocess the data
-    X_train, y_train, X_test, y_test, feature_names, sorted_features, le = load_and_preprocess()
-
-    # Print IG scores
-    print_feature_scores(sorted_features)
-
-    # Initial evaluation (baseline)
-    baseline_f1 = evaluate_baseline(feature_names, X_train, y_train, X_test, y_test, args.algorithm)
-
-    # Continue with the selected algorithm for the next steps
-    logging.info(f"Selected algorithm for constructive and local search phases: {args.algorithm.upper()}")
-
-    # Execute construction and local search
-    construction(args)
-    logging.info(f"Baseline F1-Score (All Features with {args.algorithm.upper()}): {baseline_f1:.4f}")
-
+    run_single_experiment(args)

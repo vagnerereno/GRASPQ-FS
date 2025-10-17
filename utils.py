@@ -8,119 +8,64 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder, O
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, roc_auc_score)
 import logging
 
-def load_data():
-    # Data loading
-    train_df = pd.read_csv('data/hibrid_dataset_GOOSE_train.csv', sep=',')
-    test_df = pd.read_csv('data/hibrid_dataset_GOOSE_test.csv', sep=',')
-    logging.info(f"Original dataset (Train): \n{train_df.head().to_string()}")
-    logging.info(f"Original dataset (Test): \n{test_df.head().to_string()}")
-    logging.info(f"Unique classes in the test dataset: {test_df['class'].unique()}")
-    logging.info(f"Unique classes in the training dataset: {train_df['class'].unique()}")
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    handlers=[logging.StreamHandler()])
+logger = logging.getLogger(__name__)
 
-    # Remove specific attacks from the training set
-    # train_df = train_df[train_df['class'] != 'random_replay']
-    # train_df = train_df[train_df['class'] != 'inverse_replay']
-    # train_df = train_df[train_df['class'] != 'masquerade_fake_fault']
-    # train_df = train_df[train_df['class'] != 'masquerade_fake_normal']
-    # train_df = train_df[train_df['class'] != 'injection']
-    # train_df = train_df[train_df['class'] != 'high_StNum']
-    # train_df = train_df[train_df['class'] != 'poisoned_high_rate']
-    # logging.info(f"Remaining unique classes in the training dataset: {train_df['class'].unique()}")
-    # logging.info(f"Size of the training dataset after filtering: {len(train_df)}")
+def load_unified_dataset(filepath='data/wustl-ehms-2020.csv'):
+    """
+    Loads a single, unified dataset from a CSV file.
 
-    # Remove specific attacks from the test set
-    # test_df = test_df[test_df['class'] != 'random_replay']
-    # test_df = test_df[test_df['class'] != 'inverse_replay']
-    # test_df = test_df[test_df['class'] != 'masquerade_fake_fault']
-    # test_df = test_df[test_df['class'] != 'masquerade_fake_normal']
-    # test_df = test_df[test_df['class'] != 'injection']
-    # test_df = test_df[test_df['class'] != 'high_StNum']
-    # test_df = test_df[test_df['class'] != 'poisoned_high_rate']
-    # logging.info(f"Remaining unique classes in the test dataset: {test_df['class'].unique()}")
-    # logging.info(f"Size of the test dataset after filtering: {len(test_df)}")
+    Args:
+        filepath (str): The path to the unified CSV file.
 
-    train_df = train_df.reset_index(drop=True)
-    test_df = test_df.reset_index(drop=True)
+    Returns:
+        pd.DataFrame: Features (X).
+        pd.Series: Target labels (y).
+    """
+    try:
+        df = pd.read_csv(filepath, sep=',')
+        logger.info(f"Unified dataset loaded successfully from {filepath}. Shape: {df.shape}")
+    except FileNotFoundError:
+        logger.error(f"Dataset file not found at {filepath}. Please create a unified dataset file.")
+        raise
 
-    # Enriched columns from the ERENO dataset to be removed, if necessary
-    columns_to_remove = [
-        "isbARmsValue", "isbBRmsValue", "iisbCRmsValue", "ismARmsValue", "ismBRmsValue", "ismCRmsValue",
-        "vsbARmsue", "vsbBRmsValue", "vsbCRmsValue", "vsmARmsValue", "vsmBRmsValue", "vsmCRmsValue",
-        "isbATrapAreaSum", "isbBTrapAreaSum", "isbCTrapAreaSum", "ismATrapAreaSuValm", "ismBTrapAreaSum",
-        "ismCTrapAreaSum", "vsbATrapAreaSum", "vsbBTrapAreaSum", "vsbCTrapAreaSum", "vsmATrapAreaSum",
-        "vsmBTrapAreaSum", "vsmCTrapAreaSum", "stDiff", "sqDiff", "gooseLengthDiff", "cbStatusDiff",
-        "apduSizeDiff", "frameLengthDiff", "timestampDiff", "tDiff", "timeFromLastChange", "delay"
-    ]
+    X = df.drop(columns=['Attack Category', 'Label', 'Dir', 'Flgs', 'Packet_num', 'SrcAddr', 'DstAddr', 'Sport', 'Dport', 'SrcMac', 'DstMac'])
+    y = df['Attack Category']
 
-    initial_features_train = train_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
-    initial_features_test = test_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
-
-    logging.info(f"Initial number of features in the training dataset: {initial_features_train}")
-    logging.info(f"Initial number of features in the test dataset: {initial_features_test}")
-    # Removing enriched and NaN columns (Uncomment the next 6 lines)
-    # train_df = train_df.drop(columns=columns_to_remove, errors='ignore')
-    # test_df = test_df.drop(columns=columns_to_remove, errors='ignore')
-    #
-    # remove_features_train = train_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
-    # remove_features_test = test_df.shape[1] - 1  # Subtracting 1 to exclude the 'class' column
-    # logging.info(f"Number of features in the training dataset after removing enriched ones: {remove_features_train}")
-    # logging.info(f"Number of features in the test dataset after removing enriched ones:: {remove_features_test}")
-
-    # Splitting features and labels
-    X_train = train_df.drop(columns=['class'])
-    y_train = train_df['class']
-    X_test = test_df.drop(columns=['class'])
-    y_test = test_df['class']
-
-    return X_train, y_train, X_test, y_test
-
-def preprocess_data(X_train, y_train, X_test, y_test):
-    # Identify numerical columns
-    num_cols = X_train.select_dtypes(include=[np.number]).columns
-    cat_cols = X_train.select_dtypes(include=['object']).columns
-
-    # Use StandardScaler to normalize numerical data
-    scaler = StandardScaler()
-    X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
-    X_test[num_cols] = scaler.transform(X_test[num_cols])
-
-    # Use OneHotEncoder for categorical columns
-    if len(cat_cols) > 0:
-        encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
-        cat_encoded = encoder.fit_transform(X_train[cat_cols])
-        cat_encoded_df = pd.DataFrame(cat_encoded, columns=encoder.get_feature_names_out(cat_cols))
-
-        # Drop original categorical columns and concat encoded columns
-        X_train = pd.concat([X_train[num_cols], cat_encoded_df], axis=1)
-        cat_encoded_test = encoder.transform(X_test[cat_cols])
-        cat_encoded_test_df = pd.DataFrame(cat_encoded_test, columns=encoder.get_feature_names_out(cat_cols))
-        X_test = pd.concat([X_test[num_cols], cat_encoded_test_df], axis=1)
-
-    # Initialize LabelEncoder for labels/classes
-    le = LabelEncoder()
-
-    le.fit(y_train)
-
-    y_train = le.transform(y_train)
-    y_test = le.transform(y_test) # Direct transformation of test labels
-
-    return y_train, y_test, X_train, X_test, le
+    return X, y
 
 def calculate_metrics(y_true, y_pred):
-    f1 = f1_score(y_true, y_pred, average='weighted')
+    """
+    Calculates the F1-score for the given true and predicted labels.
 
-    return f1
+    Args:
+        y_true: True labels.
+        y_pred: Predicted labels.
+
+    Returns:
+        float: The weighted F1-score.
+    """
+    return f1_score(y_true, y_pred, average='weighted')
 
 def evaluate_model(classifier, X_train, y_train, X_test, y_test):
-    # Train the classifier
+    """
+    Trains a classifier and evaluates its F1-score on the test set.
+
+    Args:
+        classifier: The scikit-learn classifier instance.
+        X_train: Training features.
+        y_train: Training labels.
+        X_test: Testing features.
+        y_test: Testing labels.
+
+    Returns:
+        float: The calculated F1-score.
+    """
     classifier.fit(X_train, y_train)
-
-    # Predict labels for the test dataset
     y_pred = classifier.predict(X_test)
-
-    # Calculate metrics
     f1 = calculate_metrics(y_test, y_pred)
-
     return f1
 
 def plot_solutions_with_priority(all_solutions, priority_queue):
@@ -175,16 +120,13 @@ def plot_solutions(all_solutions, priority_queue_snapshot, local_search_improvem
     # by_label = {label: handle for label, handle in by_label.items() if label in ['Soluções Iniciais', 'Top 10', 'Melhoradas na Busca Local']}
     plt.legend(by_label.values(), by_label.keys(), loc='lower right', prop={'weight': 'bold'})
     plt.xlim(min(iterations) - 1, max(iterations) + 1)
-    plt.tick_params(axis='x', labelsize=12)  # Aumenta o tamanho da fonte das marcações do eixo x
-    plt.tick_params(axis='y', labelsize=12)  # Aumenta o tamanho da fonte das marcações do eixo y
+    plt.tick_params(axis='x', labelsize=12)
+    plt.tick_params(axis='y', labelsize=12)
     plt.tight_layout()
 
     plt.savefig(f"all_bestsolution.png")
     plt.savefig(f"all_bestsolution.pdf")
 
-
-
-# Função para parsear argumentos da linha de comando
 def parse_args():
     parser = argparse.ArgumentParser(
         description="GRASPQ-FS for Feature Selection.",
@@ -221,6 +163,11 @@ def parse_args():
         "-cc", "--constructive_iterations", "--const",
         type=int, default=100,
         help="Number of iterations in the constructive phase."
+    )
+    parser.add_argument(
+        "-k", "--k_folds",
+        type=int, default=5,
+        help="Number of folds for cross-validation."
     )
 
     return parser.parse_args()
