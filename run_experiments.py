@@ -29,15 +29,9 @@ def setup_logger(log_filename):
     return logger
 
 def main():
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"results/run_log_{timestamp}.txt"
-    logger = setup_logger(log_filename)
-
-    start_time = time.time()
-
     parameter_to_vary = "priority_queue"
     # values_to_test = [10, 20, 30, 50]
-    values_to_test = range(1,5)
+    values_to_test = range(1,2)
 
     fixed_args = {
         "algorithm": "nb",
@@ -48,6 +42,20 @@ def main():
         "constructive_iterations": 100,
         "k_folds": 5
     }
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    algorithm_name = fixed_args.get('algorithm', 'unknown_alg')
+    base_filename = f"{algorithm_name}_varying_{parameter_to_vary}_{timestamp}"
+
+    if not os.path.exists('results'):
+        os.makedirs('results')
+
+    log_filename = f"results/run_log_{base_filename}.txt"
+    output_filename = f"results/summary_{base_filename}.csv"
+
+    logger = setup_logger(log_filename)
+
+    start_time = time.time()
 
     all_results_list = []
 
@@ -72,9 +80,6 @@ def main():
 
     results_df = pd.DataFrame(all_results_list)
 
-    if not os.path.exists('results'):
-        os.makedirs('results')
-
     rounding_map = {
         'mean_f1_score': 4,
         'std_f1_score': 4,
@@ -91,8 +96,6 @@ def main():
                 results_df[col] = results_df[col].round(decimals)
             except TypeError:
                 logger.warning(f"Could not round column '{col}' as it may not be numeric.")
-
-    output_filename = f"results/summary_{parameter_to_vary}_{timestamp}.csv"
 
     results_df.to_csv(output_filename, index=False)
 
