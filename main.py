@@ -29,21 +29,21 @@ def evaluate_algorithm(features_idx, algorithm, X_train_fold, y_train_fold, X_va
     features = [feature_names[i] for i in features_idx]
 
     if algorithm == 'knn':
-        model = KNeighborsClassifier()
+        model = KNeighborsClassifier(n_jobs=-1)
     elif algorithm == 'dt':
         model = DecisionTreeClassifier(random_state=42)
     elif algorithm == 'nb':
         model = GaussianNB()
-    elif algorithm == 'svm':
+    elif algorithm == 'svm': # Warning: This is EXTREMELY SLOW on large datasets
         model = SVC(random_state=42)
     elif algorithm == 'rf':
-        model = RandomForestClassifier(random_state=42)
+        model = RandomForestClassifier(random_state=42, n_jobs=-1)
     elif algorithm == 'xgboost':
-        model = xgb.XGBClassifier(eval_metric='mlogloss', use_label_encoder=False, random_state=42)
+        model = xgb.XGBClassifier(eval_metric='mlogloss', random_state=42, n_jobs=-1)
     elif algorithm == 'linear_svc':
-        model = LinearSVC(max_iter=2000, random_state=42, dual=True)
+        model = LinearSVC(max_iter=2000, random_state=42, dual=False)
     elif algorithm == 'sgd':
-        model = SGDClassifier(max_iter=1000, tol=1e-3, random_state=42)
+        model = SGDClassifier(max_iter=1000, tol=1e-3, random_state=42, n_jobs=-1)
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 

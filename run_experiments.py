@@ -73,10 +73,14 @@ def main():
         current_args_dict[parameter_to_vary] = value
         args = Namespace(**current_args_dict)
 
-        results_summary = run_single_experiment(args)
+        try:
+            results_summary = run_single_experiment(args)
 
-        experiment_row = {**vars(args), **results_summary}
-        all_results_list.append(experiment_row)
+            experiment_row = {**vars(args), **results_summary}
+            all_results_list.append(experiment_row)
+        except Exception as e:
+            logger.exception(f"!!! Experiment {i + 1} failed for {parameter_to_vary}={value} due to an error: {e}")
+            break
 
     results_df = pd.DataFrame(all_results_list)
 
