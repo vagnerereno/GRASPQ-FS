@@ -1,0 +1,9 @@
+# Datasets grandes
+data/*.csv
+
+# Resultados e gráficos
+results/
+data/eda_plots*/
+*.pyc
+__pycache__/
+venv/
