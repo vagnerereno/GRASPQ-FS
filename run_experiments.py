@@ -63,7 +63,7 @@ def main():
     values_to_test = range(1, 5)  # Teste rápido
 
     fixed_args = {
-        "dataset": "batadal",
+        "dataset": "ransomset",
         "algorithm": "dt",
         "rcl_size": 17,
         "initial_solution": 5,
@@ -127,6 +127,11 @@ def main():
             df_orig[target_col_orig] = df_orig[target_col_orig].map({1: 0, -1: 1})
             df_orig.dropna(subset=[target_col_orig], inplace=True)
             df_orig.dropna(inplace=True)
+        elif dataset_name == 'ransomset':
+            filepath_orig = 'data/ransomset-multiclass-dataset.csv'
+            target_col_orig = 'classe'
+            df_orig = pd.read_csv(filepath_orig, sep=',', skipinitialspace=True)
+            df_orig.columns = df_orig.columns.str.strip()
         else:
             raise ValueError("Unknown dataset name.")
 

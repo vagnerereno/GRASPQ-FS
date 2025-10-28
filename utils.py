@@ -182,8 +182,38 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
             logger.exception(f"An unexpected error occurred during WADI processing: {e}")
             raise
 
+    elif dataset_name == 'ransomset':
+        filepath = os.path.join(base_path, 'ransomset-multiclass-dataset.csv')
+        target_column = 'classe'
+        col_to_remove = 'score_binary'
+        try:
+            df = pd.read_csv(filepath, sep=',', skipinitialspace=True)
+            df.columns = df.columns.str.strip()
+            logger.info(f"Loaded {dataset_name}. Shape: {df.shape}")
+
+            if col_to_remove in df.columns:
+                logger.warning(f"Removing column '{col_to_remove}' for {dataset_name}.")
+                df = df.drop(columns=[col_to_remove])
+            else:
+                logger.info(f"Column '{col_to_remove}' not found, skipping removal.")
+
+            if target_column not in df.columns:
+                raise KeyError(f"Target column '{target_column}' not found.")
+
+            X = df.drop(columns=[target_column])
+            y = df[target_column]
+
+        except FileNotFoundError:
+            logger.error(f"File not found: {filepath}")
+            raise
+        except KeyError as e:
+            logger.error(f"Column processing error for Ransomset: {e}")
+            raise
+        except Exception as e:
+            logger.exception(f"An unexpected error occurred during Ransomset processing: {e}")
+            raise
     else:
-        raise ValueError(f"Unsupported dataset_name: {dataset_name}. Choose 'ereninho', 'batadal', or 'wadi'.")
+        raise ValueError(f"Unsupported dataset_name: {dataset_name}. Choose 'ereninho', 'batadal', 'wadi', or 'ransomset'.")
 
     feature_names = X.columns.tolist()
     logger.info(f"Dataset '{dataset_name}' processed. Final features: {len(feature_names)}. Target: '{target_column}'.")
@@ -288,9 +318,9 @@ def parse_args():
 
     parser.add_argument(
         "-d", "--dataset",
-        type=str, choices=['ereninho', 'batadal', 'wadi'],
+        type=str, choices=['ereninho', 'batadal', 'wadi', 'ransomset'],
         default='ereninho',
-        help="Dataset to use ('ereninho' or 'batadal')."
+        help="Dataset to use ('ereninho', 'batadal', 'wadi' or 'ransomset')."
     )
 
     parser.add_argument(
