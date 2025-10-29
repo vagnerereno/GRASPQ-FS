@@ -18,6 +18,7 @@ from sklearn.linear_model import SGDClassifier
 import xgboost as xgb
 import utils
 from main import run_single_experiment
+import lightgbm as lgb
 
 
 def setup_logger(log_filename):
@@ -35,36 +36,16 @@ def setup_logger(log_filename):
     logger.addHandler(console_handler)
     return logger
 
-
-def get_baseline_model(algorithm_name):
-    # Função auxiliar para instanciar o modelo do baseline (sem n_jobs)
-    if algorithm_name == 'knn':
-        return KNeighborsClassifier()
-    elif algorithm_name == 'dt':
-        return DecisionTreeClassifier(random_state=42)
-    elif algorithm_name == 'nb':
-        return GaussianNB()
-    elif algorithm_name == 'svm':
-        return SVC(random_state=42)
-    elif algorithm_name == 'rf':
-        return RandomForestClassifier(random_state=42)
-    elif algorithm_name == 'xgboost':
-        return xgb.XGBClassifier(eval_metric='mlogloss', random_state=42)
-    elif algorithm_name == 'linear_svc':
-        return LinearSVC(max_iter=2000, random_state=42, dual=False)
-    elif algorithm_name == 'sgd':
-        return SGDClassifier(max_iter=1000, tol=1e-3, random_state=42)
-    else:
-        raise ValueError(f"Baseline: Unsupported algorithm {algorithm_name}")
-
-
 def main():
     parameter_to_vary = "priority_queue"
-    values_to_test = range(1, 5)  # Teste rápido
+    values_to_test = range(1, 2)
+    #values_step_1 = list(range(1, 11))  # Gera [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    #values_step_10 = list(range(20, 101, 10))  # Gera [20, 30, 40, 50, 60, 70, 80, 90, 100]
+    #values_to_test = values_step_1 + values_step_10
 
     fixed_args = {
-        "dataset": "ransomset",
-        "algorithm": "dt",
+        "dataset": "drone",
+        "algorithm": "lightgbm",
         "rcl_size": 17,
         "initial_solution": 5,
         "local_iterations": 100,
@@ -97,12 +78,12 @@ def main():
     logger.info("--- Loading Data ---")
     try:
         if dataset_name == 'ereninho':
-            df_orig = pd.read_csv('data/ERENINHO_10k.csv', sep=',', skipinitialspace=True)
+            df_orig = pd.read_csv('data/ERENO-2.0-100K.csv', sep=',', skipinitialspace=True)
             target_col_orig = 'class'
         elif dataset_name == 'batadal':
             df1 = pd.read_csv('data/BATADAL_dataset03.csv', sep=',', skipinitialspace=True)
             df2 = pd.read_csv('data/BATADAL_dataset04.csv', sep=',', skipinitialspace=True)
-            df1.columns = df1.columns.str.strip();
+            df1.columns = df1.columns.str.strip()
             df2.columns = df2.columns.str.strip()
             df2['ATT_FLAG'] = df2['ATT_FLAG'].replace(-999, 0)
             df_orig = pd.concat([df1, df2], ignore_index=True)
@@ -130,6 +111,20 @@ def main():
         elif dataset_name == 'ransomset':
             filepath_orig = 'data/ransomset-multiclass-dataset.csv'
             target_col_orig = 'classe'
+            df_orig = pd.read_csv(filepath_orig, sep=',', skipinitialspace=True)
+            df_orig.columns = df_orig.columns.str.strip()
+        elif dataset_name == 'wustl':
+            filepath_orig = 'data/wustl-ehms-2020.csv'
+            target_col_orig = 'Attack Category'
+            df_orig = pd.read_csv(filepath_orig, sep=',', skipinitialspace=True)
+            df_orig.columns = df_orig.columns.str.strip()
+            cols_to_drop_baseline1 = ['Label']
+            cols_to_drop_exist = [col for col in cols_to_drop_baseline1 if col in df_orig.columns]
+            if cols_to_drop_exist:
+                df_orig = df_orig.drop(columns=cols_to_drop_exist)
+        elif dataset_name == 'drone':
+            filepath_orig = 'data/Normal+Attacks11.csv'
+            target_col_orig = 'label'
             df_orig = pd.read_csv(filepath_orig, sep=',', skipinitialspace=True)
             df_orig.columns = df_orig.columns.str.strip()
         else:
@@ -240,6 +235,28 @@ def main():
     logger.info("--- Experiment Run Finished ---")
     logger.info(f"Total execution time: {total_time / 60:.2f} minutes.")
     logger.info(f"Detailed logs saved to: {log_filename}")
+
+def get_baseline_model(algorithm_name):
+    if algorithm_name == 'knn':
+        return KNeighborsClassifier()
+    elif algorithm_name == 'dt':
+        return DecisionTreeClassifier(random_state=42)
+    elif algorithm_name == 'nb':
+        return GaussianNB()
+    elif algorithm_name == 'svm':
+        return SVC(random_state=42)
+    elif algorithm_name == 'rf':
+        return RandomForestClassifier(random_state=42)
+    elif algorithm_name == 'xgboost':
+        return xgb.XGBClassifier(eval_metric='mlogloss', random_state=42)
+    elif algorithm_name == 'linear_svc':
+        return LinearSVC(max_iter=2000, random_state=42, dual=False)
+    elif algorithm_name == 'sgd':
+        return SGDClassifier(max_iter=1000, tol=1e-3, random_state=42)
+    elif algorithm_name == 'lightgbm':
+        return lgb.LGBMClassifier(random_state=42, verbosity=-1)
+    else:
+        raise ValueError(f"Baseline: Unsupported algorithm {algorithm_name}")
 
 
 if __name__ == '__main__':

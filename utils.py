@@ -171,7 +171,6 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
                 X = X.drop(columns=constant_columns)
             else:
                 logger.info("No constant columns found after cleaning.")
-
         except FileNotFoundError:
             logger.error(f"File not found: {filepath}")
             raise
@@ -181,7 +180,81 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
         except Exception as e:
             logger.exception(f"An unexpected error occurred during WADI processing: {e}")
             raise
+    elif dataset_name == 'wustl':
+        filepath = os.path.join(base_path, 'wustl-ehms-2020.csv')
 
+        target_column = 'Attack Category'
+        try:
+            df = pd.read_csv(filepath, sep=',', skipinitialspace=True)
+            df.columns = df.columns.str.strip()
+            logger.info(f"Loaded {dataset_name}. Shape: {df.shape}")
+
+            cols_to_drop = [
+                'Dir', 'SrcAddr', 'DstAddr', 'DstMac',
+                'Sport',
+                'Label',
+                'Dport', 'SrcGap', 'DstGap', 'DIntPktAct', 'dMinPktSz', 'Trans',
+                'Flgs'
+            ]
+
+            if target_column in cols_to_drop:
+                cols_to_drop.remove(target_column)
+
+            cols_to_drop_exist = [col for col in cols_to_drop if col in df.columns]
+            if cols_to_drop_exist:
+                logger.warning(
+                    f"Removing {len(cols_to_drop_exist)} constant/meta/other columns for {dataset_name}: {cols_to_drop_exist}")
+                df = df.drop(columns=cols_to_drop_exist)
+            else:
+                logger.info("No specified columns to drop were found.")
+
+            if target_column not in df.columns:
+                raise KeyError(f"Target column '{target_column}' not found after cleaning.")
+            X = df.drop(columns=[target_column])
+            y = df[target_column]
+
+            if X.isnull().values.any() or y.isnull().values.any():
+                logger.warning(
+                    "NaN values detected unexpectedly after loading/cleaning WUSTL. Consider adding dropna().")
+        except FileNotFoundError:
+            logger.error(f"File not found: {filepath}"); raise
+        except KeyError as e:
+            logger.error(f"Column processing error for WUSTL: {e}"); raise
+        except Exception as e:
+            logger.exception(f"An unexpected error occurred during WUSTL processing: {e}"); raise
+    elif dataset_name == 'drone':
+        filepath = os.path.join(base_path, 'Normal+Attacks11.csv')
+        target_column = 'label'
+        try:
+            df = pd.read_csv(filepath, sep=',', skipinitialspace=True)
+            df.columns = df.columns.str.strip()
+            logger.info(f"Loaded {dataset_name}. Shape: {df.shape}")
+
+            cols_to_drop = ['fwd_seg_size_min']
+
+            cols_to_drop_exist = [col for col in cols_to_drop if col in df.columns]
+            if cols_to_drop_exist:
+                logger.warning(
+                    f"Removing {len(cols_to_drop_exist)} constant column(s) for {dataset_name}: {cols_to_drop_exist}")
+                df = df.drop(columns=cols_to_drop_exist)
+            else:
+                logger.info("No specified columns to drop were found.")
+
+            if target_column not in df.columns:
+                raise KeyError(f"Target column '{target_column}' not found after cleaning.")
+            X = df.drop(columns=[target_column])
+            y = df[target_column]
+
+            if X.isnull().values.any() or y.isnull().values.any():
+                logger.warning(
+                    "NaN values detected unexpectedly after loading/cleaning Drone dataset. Consider adding dropna().")
+
+        except FileNotFoundError:
+            logger.error(f"File not found: {filepath}"); raise
+        except KeyError as e:
+            logger.error(f"Column processing error for Drone dataset: {e}"); raise
+        except Exception as e:
+            logger.exception(f"An unexpected error occurred during Drone dataset processing: {e}"); raise
     elif dataset_name == 'ransomset':
         filepath = os.path.join(base_path, 'ransomset-multiclass-dataset.csv')
         target_column = 'classe'
@@ -325,9 +398,9 @@ def parse_args():
 
     parser.add_argument(
         "-a", "--algorithm", "--alg",
-        type=str, choices=['knn', 'dt', 'nb', 'svm', 'rf', 'xgboost', 'linear_svc', 'sgd'],
+        type=str, choices=['knn', 'dt', 'nb', 'svm', 'rf', 'xgboost', 'linear_svc', 'sgd', 'lightgbm'],
         default='nb',
-        help="Algorithm to be used for evaluation (knn, dt, nb, rf, svm, xgboost, linear_svc, sgd)."
+        help="Algorithm to be used for evaluation (knn, dt, nb, rf, svm, xgboost, linear_svc, sgd, lightgbm)."
     )
     parser.add_argument(
         "-rcl", "--rcl_size", "--rcl",

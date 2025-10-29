@@ -19,7 +19,7 @@ from sklearn.svm import SVC, LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
 import xgboost as xgb
-
+import lightgbm as lgb
 import utils
 from priority_queue import MaxPriorityQueue
 
@@ -44,6 +44,8 @@ def evaluate_algorithm(features_idx, algorithm, X_train_fold, y_train_fold, X_va
         model = LinearSVC(max_iter=2000, random_state=42, dual=False)
     elif algorithm == 'sgd':
         model = SGDClassifier(max_iter=1000, tol=1e-3, random_state=42, n_jobs=-1)
+    elif algorithm == 'lightgbm':
+        model = lgb.LGBMClassifier(random_state=42, n_jobs=-1, verbosity=-1)
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 
