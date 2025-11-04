@@ -7,6 +7,7 @@ from collections import Counter
 
 import numpy as np
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder
@@ -21,8 +22,48 @@ from sklearn.linear_model import SGDClassifier
 import xgboost as xgb
 import lightgbm as lgb
 import utils
+import shap
 from priority_queue import MaxPriorityQueue
 
+def _shap_to_ncf(values, n_samples, n_features):
+    arr = values.values if hasattr(values, "values") else values
+    if isinstance(arr, (list, tuple)) and len(arr) > 0 and hasattr(arr[0], "shape"):
+        arr = np.stack(arr, axis=1)
+    arr = np.asarray(arr)
+    if arr.ndim == 2:
+        arr = arr[:, None, :]
+    elif arr.ndim == 3:
+        if arr.shape[0] == n_samples and arr.shape[1] == n_features:
+            arr = np.transpose(arr, (0, 2, 1))
+        elif arr.shape[0] == n_samples and arr.shape[2] == n_features:
+            pass
+        elif arr.shape[1] == n_samples and arr.shape[2] == n_features:
+            arr = np.transpose(arr, (1, 0, 2))
+        elif arr.shape[0] == n_samples and arr.shape[1] != n_features and arr.shape[2] != n_features:
+            arr = np.transpose(arr, (0, 2, 1))
+    return arr
+
+
+def compute_shap_mean_abs(model_xgb, X_scaled, shap_n=4000):
+    n = X_scaled.shape[0]
+    m = min(int(shap_n), n)
+    rng = np.random.RandomState(42)
+    idx = rng.choice(n, size=m, replace=False)
+
+    if isinstance(X_scaled, pd.DataFrame):
+        Xs = X_scaled.iloc[idx].reset_index(drop=True)
+    else:
+        Xs = X_scaled[idx]
+
+    explainer = shap.TreeExplainer(model_xgb)
+    sv = explainer.shap_values(Xs)
+    sv3 = _shap_to_ncf(sv, n_samples=Xs.shape[0], n_features=Xs.shape[1])
+    shap_abs = np.abs(sv3).mean(axis=(0, 1))
+
+    if isinstance(X_scaled, pd.DataFrame):
+        return pd.Series(shap_abs, index=Xs.columns, name="SHAP_XGB_mean_abs")
+    else:
+        return shap_abs
 
 def evaluate_algorithm(features_idx, algorithm, X_train_fold, y_train_fold, X_val_fold, y_val_fold, feature_names):
     """Evaluates a subset of features using a specified ML algorithm for a given data fold."""
@@ -39,7 +80,7 @@ def evaluate_algorithm(features_idx, algorithm, X_train_fold, y_train_fold, X_va
     elif algorithm == 'rf':
         model = RandomForestClassifier(random_state=42, n_jobs=-1)
     elif algorithm == 'xgboost':
-        model = xgb.XGBClassifier(eval_metric='mlogloss', random_state=42, n_jobs=-1)
+        model = xgb.XGBClassifier(eval_metric='mlogloss', random_state=42, n_jobs=-1, tree_method="hist", n_estimators=50, max_depth=4, subsample=0.8, colsample_bytree=0.8)
     elif algorithm == 'linear_svc':
         model = LinearSVC(max_iter=2000, random_state=42, dual=False)
     elif algorithm == 'sgd':
@@ -148,41 +189,76 @@ def print_feature_scores(sorted_features):
     logger = logging.getLogger()
     logger.info("Feature ranking complete. Detailed scores saved to the log file.")
 
-    logger.debug("--- Mutual Information Feature Scores ---")
+    logger.debug("--- Feature Ranking Scores ---")
     for feature, score in sorted_features:
-        logger.debug(f"  Feature: {feature:<40} MI = {score:.4f}")
-    logger.debug("---------------------------------------")
+        logger.debug(f"  Feature: {feature:<40} Score = {score:.4f}")
+    logger.debug("------------------------------")
 
 
 def run_single_experiment(args, X_cleaned, y_cleaned_encoded, feature_names_cleaned):
-    """
-    Executes ONLY the GRASPQ-FS cross-validation experiment using pre-loaded and cleaned data.
-    Does NOT calculate baselines itself. Assumes logger is already configured.
-    Returns a dictionary with the GRASP consolidated results.
-    """
     logger = logging.getLogger()
     logger.info(f"--- Starting GRASPQ-FS Run for params: {vars(args)} ---")
+    logger.info(f"Using ranking method: {args.ranker}")
 
-    # 1. Ranking de Features (usa os dados limpos recebidos)
-    logger.info("Ranking cleaned features using Mutual Information...")
     try:
-        if X_cleaned is None or X_cleaned.empty:
-            raise ValueError("Input feature DataFrame 'X_cleaned' is empty or None.")
-        if y_cleaned_encoded is None or len(y_cleaned_encoded) == 0:
-            raise ValueError("Input target array 'y_cleaned_encoded' is empty or None.")
-        if len(feature_names_cleaned) == 0:
-            raise ValueError("Input 'feature_names_cleaned' list is empty.")
+        if not isinstance(X_cleaned, pd.DataFrame):
+            X_cleaned = pd.DataFrame(X_cleaned, columns=feature_names_cleaned)
 
-        X_for_ranking = X_cleaned.copy()
-        ig_scores = mutual_info_classif(X_for_ranking, y_cleaned_encoded, random_state=42)
-        sorted_features = sorted(zip(feature_names_cleaned, ig_scores), key=lambda x: x[1], reverse=True)
+        if args.ranker == 'mi':
+            logger.info("Ranking cleaned features using Mutual Information...")
+            X_for_mi = pd.get_dummies(X_cleaned, columns=X_cleaned.select_dtypes(exclude=np.number).columns)
+            feature_names_ranked = X_for_mi.columns.tolist()
+            ig_scores = mutual_info_classif(X_for_mi, y_cleaned_encoded, random_state=42)
+            scores_series = pd.Series(ig_scores, index=feature_names_ranked)
+
+        elif args.ranker == 'shap':
+            logger.info("Ranking cleaned features using SHAP with XGBoost...")
+            logger.info("Preparing data for SHAP model training...")
+            numeric_features = X_cleaned.select_dtypes(include=np.number).columns.tolist()
+            categorical_features = X_cleaned.select_dtypes(exclude=np.number).columns.tolist()
+
+            preprocessor_shap = ColumnTransformer(
+                transformers=[
+                    ('num', StandardScaler(), numeric_features),
+                    ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features)
+                ],
+                remainder='passthrough'
+            )
+
+            X_processed_shap = preprocessor_shap.fit_transform(X_cleaned)
+
+            # --- AJUSTE AQUI: Tornar a busca de nomes condicional ---
+            feature_names_ranked = numeric_features[:]  # Começa com as numéricas
+            if categorical_features:  # Só executa se houver colunas categóricas
+                try:
+                    ohe_feature_names = preprocessor_shap.named_transformers_['cat'].get_feature_names_out(
+                        categorical_features).tolist()
+                except AttributeError:
+                    ohe_feature_names = preprocessor_shap.named_transformers_['cat'].get_feature_names_out().tolist()
+                feature_names_ranked.extend(ohe_feature_names)  # Adiciona os nomes OHE
+            # --------------------------------------------------
+
+            X_scaled_shap_df = pd.DataFrame(X_processed_shap, columns=feature_names_ranked)
+
+            logger.info("Training temporary XGBoost model for SHAP ranking...")
+            model_xgb_shap = xgb.XGBClassifier(
+                random_state=42, n_estimators=500, learning_rate=0.05,
+                max_depth=6, subsample=0.8, colsample_bytree=0.8,
+                eval_metric='mlogloss', tree_method="hist", n_jobs=-1
+            ).fit(X_scaled_shap_df, y_cleaned_encoded)
+
+            logger.info("Calculating SHAP values...")
+            scores_series = compute_shap_mean_abs(model_xgb_shap, X_scaled_shap_df, shap_n=4000)
+
+        else:
+            raise ValueError(f"Unknown ranker: {args.ranker}")
+
+        sorted_features = sorted(scores_series.items(), key=lambda x: x[1], reverse=True)
         print_feature_scores(sorted_features)
-    except ValueError as e:
-        logger.error(f"Error during Mutual Information calculation on cleaned data: {e}")
-        return {"error": "MI calculation failed"}
+
     except Exception as e:
-        logger.exception(f"Unexpected error during MI calculation: {e}")
-        return {"error": "Unexpected error in MI"}
+        logger.exception(f"Error during feature ranking ({args.ranker}): {e}")
+        return {"error": f"{args.ranker} ranking failed"}
 
     cv_strategy = StratifiedKFold(n_splits=args.k_folds, shuffle=True, random_state=42)
     fold_f1_scores, fold_construction_times, fold_ls_times = [], [], []
@@ -191,41 +267,55 @@ def run_single_experiment(args, X_cleaned, y_cleaned_encoded, feature_names_clea
 
     for fold, (train_index, val_index) in enumerate(cv_strategy.split(X_cleaned, y_cleaned_encoded)):
         logger.info(f"========== EXECUTING GRASP FOLD {fold + 1}/{args.k_folds} ==========")
-        # Verifica se os índices são válidos
         if len(train_index) == 0 or len(val_index) == 0:
-            logger.error(f"Empty train or validation set generated by KFold in fold {fold + 1}. Skipping.")
+            logger.error(f"Empty train/validation set in fold {fold + 1}. Skipping.");
             continue
 
         try:
             X_train_fold, X_val_fold = X_cleaned.iloc[train_index], X_cleaned.iloc[val_index]
             y_train_fold, y_val_fold = y_cleaned_encoded[train_index], y_cleaned_encoded[val_index]
-        except IndexError as e:
-            logger.error(f"IndexError during data splitting in fold {fold + 1}: {e}. Skipping fold.")
-            logger.error(
-                f"Train indices length: {len(train_index)}, Max index: {max(train_index) if train_index.size > 0 else 'N/A'}. X_cleaned shape: {X_cleaned.shape}")
-            logger.error(
-                f"Validation indices length: {len(val_index)}, Max index: {max(val_index) if val_index.size > 0 else 'N/A'}. X_cleaned shape: {X_cleaned.shape}")
-            continue
         except Exception as e:
-            logger.exception(f"Unexpected error during data splitting in fold {fold + 1}: {e}. Skipping fold.")
+            logger.exception(f"Error during data splitting in fold {fold + 1}: {e}. Skipping.");
             continue
 
-        scaler = StandardScaler()
-        feature_names_fold = feature_names_cleaned
         try:
-            X_train_processed = pd.DataFrame(scaler.fit_transform(X_train_fold),
-                                             columns=feature_names_fold, index=X_train_fold.index)
-            X_val_processed = pd.DataFrame(scaler.transform(X_val_fold),
-                                           columns=feature_names_fold, index=X_val_fold.index)
+            numeric_features_fold = X_train_fold.select_dtypes(include=np.number).columns.tolist()
+            categorical_features_fold = X_train_fold.select_dtypes(exclude=np.number).columns.tolist()
+
+            preprocessor_fold = ColumnTransformer(
+                transformers=[
+                    ('num', StandardScaler(), numeric_features_fold),
+                    ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features_fold)
+                ],
+                remainder='passthrough'
+            )
+
+            X_train_processed_np = preprocessor_fold.fit_transform(X_train_fold)
+            X_val_processed_np = preprocessor_fold.transform(X_val_fold)
+
+            # --- AJUSTE AQUI TAMBÉM: Tornar a busca de nomes condicional ---
+            feature_names_fold = numeric_features_fold[:]  # Começa com as numéricas
+            if categorical_features_fold:  # Só executa se houver colunas categóricas
+                try:
+                    ohe_feature_names = preprocessor_fold.named_transformers_['cat'].get_feature_names_out(
+                        categorical_features_fold).tolist()
+                except AttributeError:
+                    ohe_feature_names = preprocessor_fold.named_transformers_['cat'].get_feature_names_out().tolist()
+                feature_names_fold.extend(ohe_feature_names)  # Adiciona os nomes OHE
+            # -----------------------------------------------------------
+
+            X_train_processed = pd.DataFrame(X_train_processed_np, columns=feature_names_fold, index=X_train_fold.index)
+            X_val_processed = pd.DataFrame(X_val_processed_np, columns=feature_names_fold, index=X_val_fold.index)
+
         except Exception as e:
-            logger.exception(f"Error during scaling in fold {fold + 1}: {e}. Skipping fold.")
+            logger.exception(f"Error during preprocessing (ColumnTransformer) in fold {fold + 1}: {e}. Skipping.");
             continue
 
         try:
             ig_scores_fold = mutual_info_classif(X_train_processed, y_train_fold, random_state=42)
             sorted_features_fold = sorted(zip(feature_names_fold, ig_scores_fold), key=lambda x: x[1], reverse=True)
         except Exception as e:
-            logger.error(f"Error during MI calculation in fold {fold + 1}: {e}. Skipping fold.")
+            logger.error(f"Error during MI calculation in fold {fold + 1}: {e}. Skipping.");
             continue
 
         try:
@@ -234,7 +324,7 @@ def run_single_experiment(args, X_cleaned, y_cleaned_encoded, feature_names_clea
                 feature_names_fold, sorted_features_fold, fold
             )
         except Exception as e:
-            logger.exception(f"Error during GRASP execution in fold {fold + 1}: {e}")
+            logger.exception(f"Error during GRASP execution in fold {fold + 1}: {e}");
             continue
 
         fold_f1_scores.append(best_f1)

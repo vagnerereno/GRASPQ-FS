@@ -194,7 +194,8 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
                 'Sport',
                 'Label',
                 'Dport', 'SrcGap', 'DstGap', 'DIntPktAct', 'dMinPktSz', 'Trans',
-                'Flgs'
+                'Flgs',
+                'SrcMac'
             ]
 
             if target_column in cols_to_drop:
@@ -223,15 +224,13 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
         except Exception as e:
             logger.exception(f"An unexpected error occurred during WUSTL processing: {e}"); raise
     elif dataset_name == 'drone':
-        filepath = os.path.join(base_path, 'Normal+Attacks11.csv')
+        filepath = os.path.join(base_path, 'drone.csv')
         target_column = 'label'
         try:
             df = pd.read_csv(filepath, sep=',', skipinitialspace=True)
             df.columns = df.columns.str.strip()
             logger.info(f"Loaded {dataset_name}. Shape: {df.shape}")
-
             cols_to_drop = ['fwd_seg_size_min']
-
             cols_to_drop_exist = [col for col in cols_to_drop if col in df.columns]
             if cols_to_drop_exist:
                 logger.warning(
@@ -239,22 +238,22 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
                 df = df.drop(columns=cols_to_drop_exist)
             else:
                 logger.info("No specified columns to drop were found.")
-
             if target_column not in df.columns:
                 raise KeyError(f"Target column '{target_column}' not found after cleaning.")
             X = df.drop(columns=[target_column])
-            y = df[target_column]
-
+            y = df[target_column]  # y é 'object' (multiclasse)
             if X.isnull().values.any() or y.isnull().values.any():
                 logger.warning(
                     "NaN values detected unexpectedly after loading/cleaning Drone dataset. Consider adding dropna().")
-
         except FileNotFoundError:
-            logger.error(f"File not found: {filepath}"); raise
+            logger.error(f"File not found: {filepath}")
+            raise
         except KeyError as e:
-            logger.error(f"Column processing error for Drone dataset: {e}"); raise
+            logger.error(f"Column processing error for Drone dataset: {e}")
+            raise
         except Exception as e:
-            logger.exception(f"An unexpected error occurred during Drone dataset processing: {e}"); raise
+            logger.exception(f"An unexpected error occurred during Drone dataset processing: {e}")
+            raise
     elif dataset_name == 'ransomset':
         filepath = os.path.join(base_path, 'ransomset-multiclass-dataset.csv')
         target_column = 'classe'
@@ -390,10 +389,17 @@ def parse_args():
     )
 
     parser.add_argument(
+        "-r", "--ranker",
+        type=str, choices=['mi', 'shap'],
+        default='mi',
+        help="Feature ranking method to use ('mi' for Mutual Information, 'shap' for SHAP)."
+    )
+
+    parser.add_argument(
         "-d", "--dataset",
-        type=str, choices=['ereninho', 'batadal', 'wadi', 'ransomset'],
+        choices=['ereninho', 'batadal', 'wadi', 'wustl', 'ransomset', 'drone'],
         default='ereninho',
-        help="Dataset to use ('ereninho', 'batadal', 'wadi' or 'ransomset')."
+        help="Dataset to use ('ereninho', 'batadal', 'wadi', 'wustl', 'ransomset', 'drone')."
     )
 
     parser.add_argument(
