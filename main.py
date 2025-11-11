@@ -227,16 +227,14 @@ def run_single_experiment(args, X_cleaned, y_cleaned_encoded, feature_names_clea
 
             X_processed_shap = preprocessor_shap.fit_transform(X_cleaned)
 
-            # --- AJUSTE AQUI: Tornar a busca de nomes condicional ---
-            feature_names_ranked = numeric_features[:]  # Começa com as numéricas
-            if categorical_features:  # Só executa se houver colunas categóricas
+            feature_names_ranked = numeric_features[:]
+            if categorical_features:
                 try:
                     ohe_feature_names = preprocessor_shap.named_transformers_['cat'].get_feature_names_out(
                         categorical_features).tolist()
                 except AttributeError:
                     ohe_feature_names = preprocessor_shap.named_transformers_['cat'].get_feature_names_out().tolist()
-                feature_names_ranked.extend(ohe_feature_names)  # Adiciona os nomes OHE
-            # --------------------------------------------------
+                feature_names_ranked.extend(ohe_feature_names)
 
             X_scaled_shap_df = pd.DataFrame(X_processed_shap, columns=feature_names_ranked)
 
@@ -293,16 +291,14 @@ def run_single_experiment(args, X_cleaned, y_cleaned_encoded, feature_names_clea
             X_train_processed_np = preprocessor_fold.fit_transform(X_train_fold)
             X_val_processed_np = preprocessor_fold.transform(X_val_fold)
 
-            # --- AJUSTE AQUI TAMBÉM: Tornar a busca de nomes condicional ---
-            feature_names_fold = numeric_features_fold[:]  # Começa com as numéricas
-            if categorical_features_fold:  # Só executa se houver colunas categóricas
+            feature_names_fold = numeric_features_fold[:]
+            if categorical_features_fold:
                 try:
                     ohe_feature_names = preprocessor_fold.named_transformers_['cat'].get_feature_names_out(
                         categorical_features_fold).tolist()
                 except AttributeError:
                     ohe_feature_names = preprocessor_fold.named_transformers_['cat'].get_feature_names_out().tolist()
-                feature_names_fold.extend(ohe_feature_names)  # Adiciona os nomes OHE
-            # -----------------------------------------------------------
+                feature_names_fold.extend(ohe_feature_names)
 
             X_train_processed = pd.DataFrame(X_train_processed_np, columns=feature_names_fold, index=X_train_fold.index)
             X_val_processed = pd.DataFrame(X_val_processed_np, columns=feature_names_fold, index=X_val_fold.index)

@@ -102,7 +102,7 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
             logger.error(f"Target column '{target_column}' not found in one of the BATADAL files.")
             raise
     elif dataset_name == 'wadi':
-        filepath = os.path.join(base_path, 'WADI_attackdataLABLE.csv')
+        filepath = os.path.join(base_path, 'WADI.csv')
         original_target_col = 'Attack LABLE (1:No Attack, -1:Attack)'
         new_target_col = 'Attack_Label'
         try:
