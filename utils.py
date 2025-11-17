@@ -224,8 +224,8 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
         except Exception as e:
             logger.exception(f"An unexpected error occurred during WUSTL processing: {e}"); raise
     elif dataset_name == 'drone':
-        filepath = os.path.join(base_path, 'drone.csv')
-        target_column = 'label'
+        filepath = os.path.join(base_path, 'drone-reduced.csv')
+        target_column = 'Label'
         try:
             df = pd.read_csv(filepath, sep=',', skipinitialspace=True)
             df.columns = df.columns.str.strip()
