@@ -284,6 +284,51 @@ def load_unified_dataset(dataset_name='ereninho', base_path='data/'):
         except Exception as e:
             logger.exception(f"An unexpected error occurred during Ransomset processing: {e}")
             raise
+    elif dataset_name == 'cic-iot':
+        filepath = os.path.join(base_path, 'cic-iot_10k.csv')
+        target_column = 'label'
+
+        try:
+            df = pd.read_csv(filepath, sep=',', skipinitialspace=True)
+            df.columns = df.columns.str.strip()
+
+            logger.info(f"Loaded {dataset_name}. Shape: {df.shape}")
+
+            cols_to_drop = ['IAT']
+
+            cols_to_drop_exist = [col for col in cols_to_drop if col in df.columns]
+
+            if cols_to_drop_exist:
+                logger.warning(
+                    f"Manually removing suspicious/dominant features for {dataset_name}: {cols_to_drop_exist}")
+                df = df.drop(columns=cols_to_drop_exist)
+
+            if target_column not in df.columns:
+                raise KeyError(f"Target column '{target_column}' not found in {dataset_name}.")
+
+            constant_columns = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
+            if constant_columns:
+                logger.warning(
+                    f"Removing {len(constant_columns)} constant columns for {dataset_name}: {constant_columns}")
+                df = df.drop(columns=constant_columns)
+
+            X = df.drop(columns=[target_column])
+            y = df[target_column]
+
+            if X.isnull().values.any() or y.isnull().values.any():
+                logger.warning(f"NaN values detected in {dataset_name}. Dropping rows with NaNs.")
+                original_len = len(df)
+                df = df.dropna()
+                X = df.drop(columns=[target_column])
+                y = df[target_column]
+                logger.info(f"Dropped {original_len - len(df)} rows containing NaNs.")
+
+        except FileNotFoundError:
+            logger.error(f"File not found: {filepath}")
+            raise
+        except Exception as e:
+            logger.exception(f"An unexpected error occurred during CIC-IoT processing: {e}")
+            raise
     else:
         raise ValueError(f"Unsupported dataset_name: {dataset_name}. Choose 'ereninho', 'batadal', 'wadi', or 'ransomset'.")
 
@@ -397,9 +442,9 @@ def parse_args():
 
     parser.add_argument(
         "-d", "--dataset",
-        choices=['ereninho', 'batadal', 'wadi', 'wustl', 'ransomset', 'drone'],
+        choices=['ereninho', 'batadal', 'wadi', 'wustl', 'ransomset', 'drone', 'cic-iot'],
         default='ereninho',
-        help="Dataset to use ('ereninho', 'batadal', 'wadi', 'wustl', 'ransomset', 'drone')."
+        help="Dataset to use ('ereninho', 'batadal', 'wadi', 'wustl', 'ransomset', 'drone', 'cic-iot')."
     )
 
     parser.add_argument(

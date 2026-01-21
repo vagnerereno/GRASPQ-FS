@@ -28,19 +28,20 @@ def setup_logger(log_filename):
 
 
 def main():
-    parameter_to_vary = "priority_queue"
+    parameter_to_vary = "initial_solution"
     values_step_1 = list(range(1, 11))
     values_step_10 = list(range(20, 101, 10))
-    values_to_test = values_step_1 + values_step_10
-    # values_to_test = range(1, 5) # Para testes rápidos
+    # values_to_test = values_step_1 + values_step_10
+    values_to_test = [5, 10, 20]
+    # values_to_test = range(1, 47) # Para testes rápidos
 
     fixed_args = {
-        "dataset": "ereninho",
-        "algorithm": "xgboost",
+        "dataset": "cic-iot",
+        "algorithm": "knn",
         "ranker": "mi",
-        "rcl_size": 17,
-        "initial_solution": 5,
-        "priority_queue": values_to_test,
+        "rcl_size": 47,
+        "initial_solution": values_to_test,
+        "priority_queue": 10,
         "local_iterations": 100,
         "constructive_iterations": 100,
         "k_folds": 5
